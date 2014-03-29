@@ -1,0 +1,21 @@
+cmake_minimum_required(VERSION 2.6)
+
+INCLUDE(CheckIncludeFiles)
+
+PROJECT(ucwmp C)
+ADD_DEFINITIONS(-Os -Wall -Werror --std=gnu99 -g3 -Wmissing-declarations)
+
+SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
+
+IF(APPLE)
+  INCLUDE_DIRECTORIES(/opt/local/include)
+  LINK_DIRECTORIES(/opt/local/lib)
+ENDIF()
+
+ADD_EXECUTABLE(session session.c soap.c cwmp.c object.c builtin.c)
+TARGET_LINK_LIBRARIES(session uclient ubox roxml blobmsg_json)
+
+INSTALL(TARGETS session
+	RUNTIME DESTINATION bin
+	LIBRARY DESTINATION lib
+)
