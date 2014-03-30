@@ -274,11 +274,8 @@ char *soap_handle_msg(char *message)
 
 	struct rpc_data data = {};
 
-	data.out = soap_msg_new(data.id, false);
-	if (!data.out)
-		goto out;
-
 	if (!message) {
+		data.out = soap_msg_new(NULL, false);
 		data.empty_message = true;
 		goto out;
 	}
@@ -288,7 +285,7 @@ char *soap_handle_msg(char *message)
 	if (!node)
 		goto parse_out;
 
-	hdr = roxml_get_chld(node, "Head", 0);
+	hdr = roxml_get_chld(node, "Header", 0);
 	if (hdr) {
 		data.id = soap_get_field(hdr, "ID");
 		if (soap_get_boolean_field(hdr, "HoldRequests", &hold_requests))
@@ -307,6 +304,10 @@ char *soap_handle_msg(char *message)
 	if (!data.method)
 		goto parse_out;
 
+	data.out = soap_msg_new(data.id, false);
+	if (!data.out)
+		goto out;
+
 	code = cwmp_session_response(&data);
 	if (code) {
 		data.response = SOAP_RESPONSE_DATA;
@@ -319,7 +320,7 @@ parse_out:
 	roxml_close(root);
 
 out:
-	if (!data.response)
+	if (!data.response && data.out)
 		cwmp_session_continue(&data);
 
 	return soap_msg_done(data.out, data.response);
