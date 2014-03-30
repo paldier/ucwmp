@@ -200,3 +200,72 @@ int cwmp_param_set(const char *name, const char *value)
 
 	return obj->set_param(obj, i, value);
 }
+
+static int fill_path(struct path_iterate *it, int ofs, const char *name)
+{
+	int len = strlen(name);
+
+	if (ofs + len + 1 >= sizeof(it->path))
+		return -1;
+
+	strcpy(it->path + ofs, name);
+
+	return ofs + len;
+}
+
+static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj, int ofs, bool next)
+{
+	struct cwmp_object *cur;
+	int n = 0;
+	int i;
+
+	for (i = 0; i < obj->n_params; i++) {
+		if (fill_path(it, ofs, obj->params[i]) < 0)
+			continue;
+
+		n += it->cb(it, obj, i);
+	}
+
+	obj->fetch_objects(obj);
+	avl_for_each_element(&obj->objects, cur, node) {
+		int ofs_cur = fill_path(it, ofs, obj->node.key);
+
+		strcpy(it->path + ofs_cur, ".");
+		ofs_cur++;
+
+		n += it->cb(it, cur, -1);
+		if (!next)
+			n += __cwmp_path_iterate(it, cur, ofs_cur, next);
+	}
+
+	return n;
+}
+
+int cwmp_path_iterate(struct path_iterate *it, bool next)
+{
+	struct cwmp_object *obj;
+	const char *param;
+	int idx;
+
+	obj = cwmp_object_get(NULL, it->path, &param);
+	if (!obj) {
+		it->error = CWMP_ERROR_INVALID_PARAM;
+		return 0;
+	}
+
+	if (next && *param) {
+		it->error = CWMP_ERROR_INVALID_ARGUMENTS;
+		return 0;
+	}
+
+	if (!*param)
+		return __cwmp_path_iterate(it, obj, param - it->path, next);
+
+	idx = cwmp_object_get_param_idx(obj, param);
+	if (idx < 0) {
+		it->error = -CWMP_ERROR_INVALID_PARAM;
+		return 0;
+	}
+
+	return it->cb(it, obj, idx);
+}

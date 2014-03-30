@@ -25,7 +25,17 @@ struct cwmp_object {
 	int (*set_param)(struct cwmp_object *obj, int param, const char *value);
 };
 
+struct path_iterate {
+	char path[CWMP_PATH_LEN];
+	node_t *node;
+	int error;
+
+	int (*cb)(struct path_iterate *it, struct cwmp_object *obj, int i);
+};
+
 extern struct cwmp_object root_object;
+
+int cwmp_path_iterate(struct path_iterate *it, bool next);
 
 int cwmp_param_set(const char *name, const char *value);
 void cwmp_commit(bool apply);
