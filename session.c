@@ -224,6 +224,7 @@ static int usage(const char *progname)
 int main(int argc, char **argv)
 {
 	const char *progname = argv[0];
+	char path[CWMP_PATH_LEN];
 	int ch;
 
 	uloop_init();
@@ -247,7 +248,8 @@ int main(int argc, char **argv)
 	if (argc != 1)
 		return usage(progname);
 
-	cwmp_param_set("InternetGatewayDevice.ManagementServer.URL", argv[0]);
+	sprintf(path, "%s.ManagementServer.URL", cwmp_object_name(&root_object));
+	cwmp_param_set(path, argv[0]);
 	cwmp_commit(true);
 
 	cur_request = soap_init_session();

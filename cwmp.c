@@ -407,7 +407,7 @@ static void cwmp_add_inform_parameters(node_t *node)
 
 	node = cwmp_open_array(node, "ParameterList");
 
-	cur = path + sprintf(path, "InternetGatewayDevice.");
+	cur = path + sprintf(path, "%s.", cwmp_object_name(&root_object));
 
 	strcpy(cur, "DeviceSummary");
 	n += cwmp_add_parameter_value(node, path);

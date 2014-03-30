@@ -35,6 +35,11 @@ void cwmp_object_delete(struct cwmp_object *obj);
 struct cwmp_object *cwmp_object_get(struct cwmp_object *root, const char *path, const char **param);
 int cwmp_object_get_param_idx(struct cwmp_object *obj, const char *name);
 
+static inline const char *cwmp_object_name(struct cwmp_object *obj)
+{
+	return obj->node.key;
+}
+
 bool cwmp_object_param_writable(struct cwmp_object *obj, int param);
 
 #endif
