@@ -1,5 +1,6 @@
 {
 	"events": [
-		[ "0 BOOTSTRAP" ]
+		[ "0 BOOTSTRAP" ],
+		[ "2 PERIODIC" ],
 	],
 }
