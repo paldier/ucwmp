@@ -3,10 +3,14 @@
 
 #include <libubox/utils.h>
 #include <libubox/uloop.h>
+#include <libubox/blobmsg.h>
+#include <libubox/blobmsg_json.h>
 
 #include "soap.h"
 #include "cwmp.h"
 #include "object.h"
+
+static struct blob_buf events;
 
 struct path_iterate {
 	char path[CWMP_PATH_LEN];
@@ -429,11 +433,61 @@ static void cwmp_add_inform_parameters(node_t *node)
 	cwmp_close_array(node, n, "ParameterValueStruct");
 }
 
+
+static int cwmp_add_event(node_t *node, struct blob_attr *ev)
+{
+	static const struct blobmsg_policy ev_policy[2] = {
+		{ .type = BLOBMSG_TYPE_STRING },
+		{ .type = BLOBMSG_TYPE_STRING },
+	};
+	struct blob_attr *ev_attr[2];
+	struct xml_kv ev_kv[2] = {
+		{ "EventCode" },
+		{ "CommandKey" },
+	};
+	const char *val = "";
+
+	if (blobmsg_type(ev) != BLOBMSG_TYPE_ARRAY)
+		return 0;
+
+	blobmsg_parse_array(ev_policy, ARRAY_SIZE(ev_policy), ev_attr,
+			    blobmsg_data(ev), blobmsg_data_len(ev));
+	if (!ev_attr[0])
+		return 0;
+
+	if (ev_attr[1])
+		val = blobmsg_data(ev_attr[1]);
+
+	ev_kv[0].value = blobmsg_data(ev_attr[0]);
+	ev_kv[1].value = val;
+
+	node = roxml_add_node(node, 0, ROXML_ELM_NODE, "EventStruct", NULL);
+	xml_add_multi(node, ROXML_ELM_NODE, ARRAY_SIZE(ev_kv), ev_kv, NULL);
+	return 1;
+}
+
 static void cwmp_add_inform_events(node_t *node)
 {
+	static const struct blobmsg_policy evlist_policy = {
+		.name = "events",
+		.type = BLOBMSG_TYPE_ARRAY,
+	};
+	struct blob_attr *ev = NULL;
 	int n = 0;
 
+	if (events.head)
+		blobmsg_parse(&evlist_policy, 1, &ev, blob_data(events.head), blob_len(events.head));
+
 	node = cwmp_open_array(node, "Event");
+
+	if (ev) {
+		struct blob_attr *cur;
+		int rem;
+
+		blobmsg_for_each_attr(cur, ev, rem)
+			n += cwmp_add_event(node, cur);
+	}
+
 	cwmp_close_array(node, n, "EventStruct");
 }
 
@@ -463,4 +517,10 @@ void cwmp_session_continue(struct rpc_data *data)
 	}
 
 	data->response = SOAP_RESPONSE_EMPTY;
+}
+
+void cwmp_load_events(const char *filename)
+{
+	blob_buf_init(&events, 0);
+	blobmsg_add_json_from_file(&events, filename);
 }

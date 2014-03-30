@@ -216,6 +216,7 @@ static int usage(const char *progname)
 	fprintf(stderr, "Usage: %s [options] <url>\n"
 		"Options:\n"
 		"	-I <file>:      Load device info from <file>\n"
+		"	-e <file>:      Load events from <file>\n"
 		"	-d:             Increase debug level\n"
 		"\n", progname);
 	return 1;
@@ -229,13 +230,16 @@ int main(int argc, char **argv)
 
 	uloop_init();
 
-	while ((ch = getopt(argc, argv, "dI:")) != -1) {
+	while ((ch = getopt(argc, argv, "dI:e:")) != -1) {
 		switch (ch) {
 		case 'd':
 			debug_level++;
 			break;
 		case 'I':
 			server_load_info(optarg);
+			break;
+		case 'e':
+			cwmp_load_events(optarg);
 			break;
 		default:
 			return usage(progname);
