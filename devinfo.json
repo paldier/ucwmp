@@ -1,4 +1,10 @@
 {
 	"Manufacturer": "OpenWrt",
-	"HardwareVersion": "unknown"
+	"ManufacturerOUI": "BADF00",
+	"ModelName": "Test Unit",
+	"Description": "ucwmp dummy test unit",
+	"ProductClass": "TestDevice",
+	"SerialNumber": "0123456789",
+	"HardwareVersion": "v0",
+	"SoftwareVersion": "0.0"
 }
