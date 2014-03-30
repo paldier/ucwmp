@@ -313,12 +313,14 @@ static int cwmp_handle_delete_object(struct rpc_data *data)
 
 static int cwmp_handle_factory_reset(struct rpc_data *data)
 {
-	return CWMP_ERROR_REQUEST_DENIED;
+	roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:FactoryResetResponse", NULL);
+	return 0;
 }
 
 static int cwmp_handle_reboot(struct rpc_data *data)
 {
-	return CWMP_ERROR_REQUEST_DENIED;
+	roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:RebootResponse", NULL);
+	return 0;
 }
 
 static int cwmp_handle_download(struct rpc_data *data)
