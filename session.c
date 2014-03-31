@@ -217,7 +217,7 @@ static int usage(const char *progname)
 		"Options:\n"
 		"	-I <file>:      Load device info from <file>\n"
 		"	-e <file>:      Load events from <file>\n"
-		"	-d:             Increase debug level\n"
+		"	-d <level>:     Set debug level\n"
 		"\n", progname);
 	return 1;
 }
@@ -230,10 +230,10 @@ int main(int argc, char **argv)
 
 	uloop_init();
 
-	while ((ch = getopt(argc, argv, "dI:e:")) != -1) {
+	while ((ch = getopt(argc, argv, "d:I:e:")) != -1) {
 		switch (ch) {
 		case 'd':
-			debug_level++;
+			debug_level = atoi(optarg);
 			break;
 		case 'I':
 			server_load_info(optarg);
