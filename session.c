@@ -236,12 +236,15 @@ static int load_events(const char *data)
 	}
 
 	if (json_object_get_type(obj) != json_type_array) {
+		json_object_put(obj);
 		fprintf(stderr, "JSON event data must be an array\n");
 		return -1;
 	}
 
 	blob_buf_init(&events, 0);
 	blobmsg_add_json_element(&events, "events", obj);
+	json_object_put(obj);
+
 	return 0;
 }
 
