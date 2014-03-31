@@ -287,6 +287,7 @@ int main(int argc, char **argv)
 
 	sprintf(path, "%s.ManagementServer.URL", cwmp_object_name(&root_object));
 	cwmp_param_set(path, argv[0]);
+	memset(argv[0], 0, strlen(argv[0]));
 	cwmp_commit(true);
 
 	cur_request = soap_init_session();
