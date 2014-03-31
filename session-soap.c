@@ -1,7 +1,7 @@
 #include <libubox/utils.h>
 #include <roxml.h>
 
-#include "soap.h"
+#include "session-soap.h"
 #include "session-rpc.h"
 
 static int cwmp_minor_ver = 4;

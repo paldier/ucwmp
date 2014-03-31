@@ -4,7 +4,7 @@
 #include <libubox/avl.h>
 #include <roxml.h>
 
-#include "soap.h"
+#include "session-soap.h"
 
 #define CWMP_PATH_LEN	256
 

@@ -1,7 +1,7 @@
 #include <libubox/utils.h>
 #include <libubox/blobmsg_json.h>
 
-#include "soap.h"
+#include "session-soap.h"
 #include "session-rpc.h"
 #include "object.h"
 #include "util.h"
