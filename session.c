@@ -248,10 +248,20 @@ static int load_events(const char *data)
 	return 0;
 }
 
+static void cwmp_set_management_param(const char *name, const char *value)
+{
+	char path[CWMP_PATH_LEN];
+
+	sprintf(path, "%s.%s.%s", cwmp_object_name(&root_object),
+		"ManagementServer", name);
+
+	cwmp_param_set(path, value);
+}
+
 int main(int argc, char **argv)
 {
 	const char *progname = argv[0];
-	char path[CWMP_PATH_LEN];
+	const char *var;
 	int ch;
 
 	uloop_init();
@@ -270,11 +280,8 @@ int main(int argc, char **argv)
 			break;
 		case 'u':
 		case 'p':
-			sprintf(path, "%s.%s.%s",
-				cwmp_object_name(&root_object),
-				"ManagementServer",
-				(ch == 'u' ? "Username" : "Password"));
-			cwmp_param_set(path, optarg);
+			var = (ch == 'u' ? "Username" : "Password");
+			cwmp_set_management_param(var, optarg);
 			memset(optarg, 0, strlen(optarg));
 			break;
 		default:
@@ -288,9 +295,9 @@ int main(int argc, char **argv)
 	if (argc != 1)
 		return usage(progname);
 
-	sprintf(path, "%s.ManagementServer.URL", cwmp_object_name(&root_object));
-	cwmp_param_set(path, argv[0]);
+	cwmp_set_management_param("URL", argv[0]);
 	memset(argv[0], 0, strlen(argv[0]));
+
 	cwmp_commit(true);
 
 	cur_request = soap_init_session();
