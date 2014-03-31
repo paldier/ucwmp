@@ -7,7 +7,7 @@
 #include <libubox/blobmsg_json.h>
 
 #include "soap.h"
-#include "cwmp.h"
+#include "session-rpc.h"
 #include "object.h"
 
 struct blob_buf events;

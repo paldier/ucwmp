@@ -1,7 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "cwmp.h"
+#include "session-rpc.h"
 #include "object.h"
 
 static int cwmp_dot_len(const char *str)

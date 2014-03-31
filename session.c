@@ -8,7 +8,7 @@
 #include <libubox/blobmsg_json.h>
 
 #include "soap.h"
-#include "cwmp.h"
+#include "session-rpc.h"
 #include "object.h"
 
 static int debug_level = 0;

@@ -2,7 +2,7 @@
 #include <roxml.h>
 
 #include "soap.h"
-#include "cwmp.h"
+#include "session-rpc.h"
 
 static int cwmp_minor_ver = 4;
 

@@ -2,7 +2,7 @@
 #include <libubox/blobmsg_json.h>
 
 #include "soap.h"
-#include "cwmp.h"
+#include "session-rpc.h"
 #include "object.h"
 #include "util.h"
 
