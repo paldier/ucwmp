@@ -13,7 +13,8 @@ IF(APPLE)
 ENDIF()
 
 ADD_EXECUTABLE(session session.c soap.c cwmp.c object.c builtin.c)
-TARGET_LINK_LIBRARIES(session uclient ubox roxml blobmsg_json)
+find_library(json NAMES json-c json)
+TARGET_LINK_LIBRARIES(session uclient ubox roxml blobmsg_json ${json})
 
 INSTALL(TARGETS session
 	RUNTIME DESTINATION bin

@@ -51,6 +51,8 @@ struct rpc_method {
 	int (*handler) (struct rpc_data *data);
 };
 
+extern struct blob_buf events;
+
 int cwmp_session_init(struct rpc_data *data);
 int cwmp_session_response(struct rpc_data *data);
 void cwmp_session_continue(struct rpc_data *data);

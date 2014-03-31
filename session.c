@@ -5,6 +5,7 @@
 #include <libubox/uloop.h>
 #include <libubox/uclient.h>
 #include <libubox/blobmsg.h>
+#include <libubox/blobmsg_json.h>
 
 #include "soap.h"
 #include "cwmp.h"
@@ -18,6 +19,7 @@ static int buf_len, buf_ofs;
 static char *cur_request;
 
 static LIST_HEAD(cookies);
+struct blob_buf events;
 
 struct cookie {
 	struct list_head list;
@@ -216,10 +218,29 @@ static int usage(const char *progname)
 	fprintf(stderr, "Usage: %s [options] <url>\n"
 		"Options:\n"
 		"	-I <file>:      Load device info from <file>\n"
-		"	-e <file>:      Load events from <file>\n"
+		"	-e <json>:      Load events from JSON string\n"
 		"	-d <level>:     Set debug level\n"
 		"\n", progname);
 	return 1;
+}
+
+static int load_events(const char *data)
+{
+	json_object *obj = json_tokener_parse(data);
+
+	if (is_error(obj)) {
+		fprintf(stderr, "Could not parse event data\n");
+		return -1;
+	}
+
+	if (json_object_get_type(obj) != json_type_array) {
+		fprintf(stderr, "JSON event data must be an array\n");
+		return -1;
+	}
+
+	blob_buf_init(&events, 0);
+	blobmsg_add_json_element(&events, "events", obj);
+	return 0;
 }
 
 int main(int argc, char **argv)
@@ -239,7 +260,8 @@ int main(int argc, char **argv)
 			server_load_info(optarg);
 			break;
 		case 'e':
-			cwmp_load_events(optarg);
+			if (load_events(optarg))
+				return 1;
 			break;
 		default:
 			return usage(progname);

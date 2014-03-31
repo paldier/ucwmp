@@ -10,7 +10,7 @@
 #include "cwmp.h"
 #include "object.h"
 
-static struct blob_buf events;
+struct blob_buf events;
 
 static node_t *cwmp_open_array(node_t *node, const char *name)
 {
@@ -391,26 +391,18 @@ static int cwmp_add_event(node_t *node, struct blob_attr *ev)
 
 static void cwmp_add_inform_events(node_t *node)
 {
-	static const struct blobmsg_policy evlist_policy = {
-		.name = "events",
-		.type = BLOBMSG_TYPE_ARRAY,
-	};
 	struct blob_attr *ev = NULL;
 	int n = 0;
 
-	if (events.head)
-		blobmsg_parse(&evlist_policy, 1, &ev, blob_data(events.head), blob_len(events.head));
-
 	node = cwmp_open_array(node, "Event");
-
-	if (ev) {
+	if (events.head) {
 		struct blob_attr *cur;
 		int rem;
 
+		ev = blob_data(events.head);
 		blobmsg_for_each_attr(cur, ev, rem)
 			n += cwmp_add_event(node, cur);
 	}
-
 	cwmp_close_array(node, n, "EventStruct");
 }
 
@@ -440,10 +432,4 @@ void cwmp_session_continue(struct rpc_data *data)
 	}
 
 	data->response = SOAP_RESPONSE_EMPTY;
-}
-
-void cwmp_load_events(const char *filename)
-{
-	blob_buf_init(&events, 0);
-	blobmsg_add_json_from_file(&events, filename);
 }
