@@ -45,6 +45,17 @@ static void event_add(const char *id, const char *key)
 	blobmsg_close_array(&b, e);
 }
 
+static void event_free_multi(struct event_multi **head)
+{
+	struct event_multi *cur;
+
+	while (*head) {
+		cur = *head;
+		*head = cur->next;
+		free(cur);
+	}
+}
+
 char *cwmp_state_get_events(void)
 {
 	struct event_multi **tail = &event_multi_pending;
@@ -55,8 +66,11 @@ char *cwmp_state_get_events(void)
 	event_pending |= event_flagged;
 	event_flagged = 0;
 
-	if (event_pending & (1 << EVENT_BOOTSTRAP))
+	if (event_pending & (1 << EVENT_BOOTSTRAP)) {
 		event_pending = 1 << EVENT_BOOTSTRAP;
+		event_free_multi(&event_multi_pending);
+		event_free_multi(&event_multi_flagged);
+	}
 
 	blob_buf_init(&b, 0);
 
