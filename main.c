@@ -225,6 +225,12 @@ int main(int argc, char **argv)
 		return 1;
 
 	uloop_init();
+
+	if (cwmp_ubus_register()) {
+		fprintf(stderr, "Failed to register ubus object\n");
+		return 1;
+	}
+
 	cwmp_load_events(events_file);
 	uloop_timeout_cancel(&save_events);
 	cwmp_schedule_session();

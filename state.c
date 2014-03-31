@@ -56,6 +56,13 @@ static void event_free_multi(struct event_multi **head)
 	}
 }
 
+void cwmp_clear_pending_events(void)
+{
+	event_pending = 0;
+	event_free_multi(&event_multi_pending);
+	cwmp_save_events();
+}
+
 char *cwmp_state_get_events(void)
 {
 	struct event_multi **tail = &event_multi_pending;
@@ -108,7 +115,7 @@ void cwmp_flag_event(const char *id, const char *command_key)
 
 		event_flagged |= (1 << i);
 		free(event_command_key[i]);
-		event_command_key[i] = command_key ? strdup(command_key) : "";
+		event_command_key[i] = command_key ? strdup(command_key) : NULL;
 		goto out;
 	}
 

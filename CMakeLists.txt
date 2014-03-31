@@ -18,11 +18,11 @@ IF(DUMMY_MODE)
 ENDIF()
 
 ADD_EXECUTABLE(session session.c session-rpc.c session-soap.c session-builtin.c object.c)
-ADD_EXECUTABLE(cwmpd main.c state.c)
+ADD_EXECUTABLE(cwmpd main.c state.c ubus.c)
 
 find_library(json NAMES json-c json)
-TARGET_LINK_LIBRARIES(session uclient ubox roxml blobmsg_json ${json})
-TARGET_LINK_LIBRARIES(cwmpd uci ubox blobmsg_json ${json})
+TARGET_LINK_LIBRARIES(session ubus uclient ubox roxml blobmsg_json ${json})
+TARGET_LINK_LIBRARIES(cwmpd uci ubus ubox blobmsg_json ${json})
 
 INSTALL(TARGETS session
 	RUNTIME DESTINATION bin
