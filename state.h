@@ -23,5 +23,7 @@ enum cwmp_event_multi {
 
 char *cwmp_state_get_events(void);
 void cwmp_flag_event(const char *id, const char *command_key);
+void cwmp_load_events(const char *filename);
+void cwmp_save_events(void);
 
 #endif

@@ -109,7 +109,7 @@ void cwmp_flag_event(const char *id, const char *command_key)
 		event_flagged |= (1 << i);
 		free(event_command_key[i]);
 		event_command_key[i] = command_key ? strdup(command_key) : "";
-		return;
+		goto out;
 	}
 
 	for (i = 0; i < __EVENT_M_MAX; i++) {
@@ -125,6 +125,49 @@ void cwmp_flag_event(const char *id, const char *command_key)
 
 		ev->next = event_multi_flagged;
 		event_multi_flagged = ev;
-		return;
+		goto out;
 	}
+
+	return;
+
+out:
+	cwmp_save_events();
+}
+
+void cwmp_load_events(const char *filename)
+{
+	static const struct blobmsg_policy ev_attr[2] = {
+		{ .type = BLOBMSG_TYPE_STRING },
+		{ .type = BLOBMSG_TYPE_STRING },
+	};
+	struct blob_attr *cur;
+	json_object *obj;
+	int rem;
+
+	blob_buf_init(&b, 0);
+
+	obj = json_object_from_file(filename);
+	if (is_error(obj))
+		return;
+
+	if (json_object_get_type(obj) == json_type_array)
+		goto out;
+
+	blobmsg_add_json_element(&b, "events", obj);
+
+	blobmsg_for_each_attr(cur, blob_data(b.head), rem) {
+		struct blob_attr *tb[2];
+
+		blobmsg_parse_array(ev_attr, ARRAY_SIZE(ev_attr), tb,
+				    blobmsg_data(cur), blobmsg_data_len(cur));
+
+		if (!tb[0])
+			continue;
+
+		cwmp_flag_event(blobmsg_data(tb[0]),
+				tb[1] ? blobmsg_data(tb[1]) : NULL);
+	}
+
+out:
+	json_object_put(obj);
 }

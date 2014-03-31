@@ -11,23 +11,51 @@
 
 #ifdef DUMMY_MODE
 #define CWMP_CONFIG_DIR	"./examples/config"
-#define CWMP_INFO_FILE "./examples/cwmp-device.json"
+#define CWMP_INFO_DIR "./examples"
 #define CWMP_SESSION_BIN "./session"
 #else
 #define CWMP_CONFIG_DIR	NULL /* UCI default */
-#define CWMP_INFO_FILE "./examples/cwmp-device.json"
+#define CWMP_INFO_DIR "/etc/cwmp"
 #define CWMP_SESSION_BIN "session"
 #endif
+
+#define CWMP_INFO_FILE	CWMP_INFO_DIR "/cwmp-device.json"
+#define CWMP_EVENT_FILE	CWMP_INFO_DIR "/events.json"
 
 static struct uci_context *uci_ctx;
 static const char *session_path = CWMP_SESSION_BIN;
 static const char *devinfo_path = CWMP_INFO_FILE;
 static const char *config_path = CWMP_CONFIG_DIR;
+static const char *events_file = CWMP_EVENT_FILE;
 
 static char *acs_info[3];
 
 static bool session_pending;
 static int debug_level;
+
+static void __cwmp_save_events(struct uloop_timeout *timeout)
+{
+	char *events = cwmp_state_get_events();
+	FILE *f;
+
+	f = fopen(events_file, "w+");
+	if (!f)
+		return;
+
+	fwrite(events, strlen(events), 1, f);
+	fclose(f);
+
+	free(events);
+}
+
+static struct uloop_timeout save_events = {
+	.cb = __cwmp_save_events,
+};
+
+void cwmp_save_events(void)
+{
+	uloop_timeout_set(&save_events, 1);
+}
 
 static void session_cb(struct uloop_process *c, int ret);
 static struct uloop_process session_proc = {
@@ -156,6 +184,7 @@ static int usage(const char *prog)
 		"Options:\n"
 		"	-c <path>       Path to UCI config file (default: %s)\n"
 		"	-I <file>       Device information file (default: " CWMP_INFO_FILE ")\n"
+		"	-E <file>       CWMP events storage file (default: " CWMP_EVENT_FILE ")\n"
 		"	-d              Increase debug level\n"
 		"	-s <path>       Path to session tool\n"
 		"\n", prog, CWMP_CONFIG_DIR ? CWMP_CONFIG_DIR : UCI_CONFDIR);
@@ -168,13 +197,16 @@ int main(int argc, char **argv)
 
 	uci_ctx = uci_alloc_context();
 
-	while ((ch = getopt(argc, argv, "c:dI:s:")) != -1) {
+	while ((ch = getopt(argc, argv, "c:dE:I:s:")) != -1) {
 		switch(ch) {
 		case 'c':
 			config_path = optarg;
 			break;
 		case 'I':
 			devinfo_path = optarg;
+			break;
+		case 'E':
+			events_file = optarg;
 			break;
 		case 'd':
 			debug_level++;
@@ -193,6 +225,8 @@ int main(int argc, char **argv)
 		return 1;
 
 	uloop_init();
+	cwmp_load_events(events_file);
+	uloop_timeout_cancel(&save_events);
 	cwmp_schedule_session();
 	uloop_run();
 	uloop_done();
