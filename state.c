@@ -63,18 +63,23 @@ void cwmp_clear_pending_events(void)
 	cwmp_save_events();
 }
 
-char *cwmp_state_get_events(void)
+char *cwmp_state_get_events(bool pending)
 {
 	struct event_multi **tail = &event_multi_pending;
 	struct event_multi *cur = *tail;
+	unsigned int cur_pending;
 	void *c;
 	int i;
 
-	event_pending |= event_flagged;
-	event_flagged = 0;
+	cur_pending = event_pending | event_flagged;
 
-	if (event_pending & (1 << EVENT_BOOTSTRAP)) {
-		event_pending = 1 << EVENT_BOOTSTRAP;
+	if (pending) {
+		event_pending = cur_pending;
+		event_flagged = 0;
+	}
+
+	if (cur_pending & (1 << EVENT_BOOTSTRAP)) {
+		cur_pending = 1 << EVENT_BOOTSTRAP;
 		event_free_multi(&event_multi_pending);
 		event_free_multi(&event_multi_flagged);
 	}
@@ -84,7 +89,7 @@ char *cwmp_state_get_events(void)
 	c = blobmsg_open_array(&b, NULL);
 
 	for (i = 0; i < __EVENT_MAX; i++) {
-		if (!(event_pending & (1 << i)))
+		if (!(cur_pending & (1 << i)))
 			continue;
 
 		event_add(event_codes[i], event_command_key[i]);
@@ -93,8 +98,12 @@ char *cwmp_state_get_events(void)
 	for (tail = &event_multi_pending; *tail; cur = *tail, tail = &cur->next)
 		event_add(event_multi_codes[cur->idx], cur->data);
 
-	*tail = event_multi_flagged;
-	event_multi_flagged = NULL;
+	if (pending) {
+		*tail = event_multi_flagged;
+		event_multi_flagged = NULL;
+	} else {
+		tail = &event_multi_flagged;
+	}
 
 	for (cur = *tail; cur; cur = cur->next)
 		event_add(event_multi_codes[cur->idx], cur->data);

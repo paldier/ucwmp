@@ -35,7 +35,7 @@ static int debug_level;
 
 static void __cwmp_save_events(struct uloop_timeout *timeout)
 {
-	char *events = cwmp_state_get_events();
+	char *events = cwmp_state_get_events(false);
 	FILE *f;
 
 	f = fopen(events_file, "w+");
@@ -99,7 +99,7 @@ static void cwmp_exec_session(const char *event_data)
 
 static void cwmp_run_session(void)
 {
-	char *ev = cwmp_state_get_events();
+	char *ev = cwmp_state_get_events(true);
 	int pid;
 
 	session_pending = false;

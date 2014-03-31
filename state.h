@@ -21,7 +21,7 @@ enum cwmp_event_multi {
 	__EVENT_M_MAX
 };
 
-char *cwmp_state_get_events(void);
+char *cwmp_state_get_events(bool move_pending);
 void cwmp_flag_event(const char *id, const char *command_key);
 void cwmp_load_events(const char *filename);
 void cwmp_save_events(void);
