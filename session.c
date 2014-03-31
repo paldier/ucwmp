@@ -220,6 +220,8 @@ static int usage(const char *progname)
 		"	-I <file>:      Load device info from <file>\n"
 		"	-e <json>:      Load events from JSON string\n"
 		"	-d <level>:     Set debug level\n"
+		"	-u <username>:  Set ACS username\n"
+		"	-p <password>:  Set ACS password\n"
 		"\n", progname);
 	return 1;
 }
@@ -262,6 +264,14 @@ int main(int argc, char **argv)
 		case 'e':
 			if (load_events(optarg))
 				return 1;
+			break;
+		case 'u':
+		case 'p':
+			sprintf(path, "%s.%s.%s",
+				cwmp_object_name(&root_object),
+				"ManagementServer",
+				(ch == 'u' ? "Username" : "Password"));
+			cwmp_param_set(path, optarg);
 			break;
 		default:
 			return usage(progname);
