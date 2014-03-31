@@ -272,6 +272,7 @@ int main(int argc, char **argv)
 				"ManagementServer",
 				(ch == 'u' ? "Username" : "Password"));
 			cwmp_param_set(path, optarg);
+			memset(optarg, 0, strlen(optarg));
 			break;
 		default:
 			return usage(progname);
