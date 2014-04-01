@@ -276,4 +276,6 @@ int main(int argc, char **argv)
 	cwmp_schedule_session();
 	uloop_run();
 	uloop_done();
+
+	return 0;
 }
