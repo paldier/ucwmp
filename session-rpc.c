@@ -286,13 +286,19 @@ static int cwmp_handle_get_rpc_methods(struct rpc_data *data)
 	return 0;
 }
 
+static int cwmp_inform_response(struct rpc_data *data)
+{
+	cwmp_clear_pending_events();
+	return 0;
+}
+
 static int cwmp_ignore_response(struct rpc_data *data)
 {
 	return 0;
 }
 
 static const struct rpc_method response_types[] = {
-	{ "InformResponse", cwmp_ignore_response },
+	{ "InformResponse", cwmp_inform_response },
 	{ "TransferCompleteResponse", cwmp_ignore_response },
 };
 

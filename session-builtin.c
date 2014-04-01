@@ -145,6 +145,12 @@ void server_load_info(const char *filename)
 	}
 }
 
+void cwmp_clear_pending_events(void)
+{
+	blob_buf_init(&b, 0);
+	ubus_invoke(ubus_ctx, cwmp_id, "event_sent", b.head, NULL, NULL, 0);
+}
+
 void cwmp_add_device_id(node_t *node)
 {
 	struct xml_kv kv[] = {
