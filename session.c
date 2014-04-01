@@ -309,5 +309,8 @@ int main(int argc, char **argv)
 	uloop_run();
 	uloop_done();
 
+	if (debug_level)
+		fprintf(stderr, "Session completed\n");
+
 	return 0;
 }

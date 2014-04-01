@@ -432,7 +432,6 @@ int cwmp_session_init(struct rpc_data *data)
 void cwmp_session_continue(struct rpc_data *data)
 {
 	if (data->empty_message) {
-		fprintf(stderr, "Session end\n");
 		uloop_end();
 		return;
 	}
