@@ -27,6 +27,8 @@ void cwmp_load_events(const char *filename);
 void cwmp_save_events(void);
 void cwmp_clear_pending_events(void);
 
+int cwmp_set_acs_config(char *info[3]);
+
 int cwmp_ubus_register(void);
 
 #endif

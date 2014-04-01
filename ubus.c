@@ -39,9 +39,38 @@ cwmp_event_add(struct ubus_context *ctx, struct ubus_object *obj,
 	return 0;
 }
 
+static const struct blobmsg_policy acs_policy[] = {
+	{ .name = "url", .type = BLOBMSG_TYPE_STRING },
+	{ .name = "username", .type = BLOBMSG_TYPE_STRING },
+	{ .name = "password", .type = BLOBMSG_TYPE_STRING },
+};
+
+static int
+cwmp_acs_set_url(struct ubus_context *ctx, struct ubus_object *obj,
+	         struct ubus_request_data *req, const char *method,
+	         struct blob_attr *msg)
+{
+	struct blob_attr *tb[3];
+	char *url[3];
+	int i;
+
+	blobmsg_parse(acs_policy, ARRAY_SIZE(acs_policy), tb, blob_data(msg), blob_len(msg));
+	if (!tb[0])
+		return UBUS_STATUS_INVALID_ARGUMENT;
+
+	for (i = 0; i < ARRAY_SIZE(url); i++)
+		url[i] = tb[i] ? blobmsg_data(tb[i]) : NULL;
+
+	if (cwmp_set_acs_config(url))
+		return UBUS_STATUS_INVALID_ARGUMENT;
+
+	return 0;
+}
+
 static struct ubus_method cwmp_methods[] = {
 	UBUS_METHOD_NOARG("event_sent", cwmp_event_sent),
 	UBUS_METHOD("event_add", cwmp_event_add, event_policy ),
+	UBUS_METHOD("acs_set_url", cwmp_acs_set_url, acs_policy ),
 };
 
 static struct ubus_object_type cwmp_object_type =

@@ -33,6 +33,12 @@ static char *acs_info[3];
 static bool session_pending;
 static int debug_level;
 
+static const struct uci_parse_option acs_opts[] = {
+	{ "url", UCI_TYPE_STRING },
+	{ "username", UCI_TYPE_STRING },
+	{ "password", UCI_TYPE_STRING },
+};
+
 static void __cwmp_save_events(struct uloop_timeout *timeout)
 {
 	char *events = cwmp_state_get_events(false);
@@ -137,44 +143,77 @@ static void cwmp_schedule_session(void)
 	cwmp_run_session();
 }
 
-static int cwmp_load_config(void)
+static int cwmp_get_config_section(struct uci_ptr *ptr)
 {
-	static const struct uci_parse_option opts[] = {
-		{ "url", UCI_TYPE_STRING },
-		{ "username", UCI_TYPE_STRING },
-		{ "password", UCI_TYPE_STRING },
-	};
-	struct uci_option *tb[3];
-	struct uci_ptr ptr = {};
-	char buf[32];
-	int i, ret = 0;
+	static char buf[32];
 
 	strcpy(buf, "cwmp.@cwmp[0]");
-	if (uci_lookup_ptr(uci_ctx, &ptr, buf, true)) {
+	if (uci_lookup_ptr(uci_ctx, ptr, buf, true)) {
 		uci_perror(uci_ctx, "Failed to load configuration");
 		return -1;
 	}
 
-	uci_parse_section(ptr.s, opts, ARRAY_SIZE(opts), tb);
+	return 0;
+}
+
+static int cwmp_load_config(void)
+{
+	struct uci_option *tb[3];
+	struct uci_ptr ptr = {};
+	int i;
+
+	if (cwmp_get_config_section(&ptr))
+		return -1;
+
+	uci_parse_section(ptr.s, acs_opts, ARRAY_SIZE(acs_opts), tb);
 	if (!tb[0]) {
 		fprintf(stderr, "ACS URL not found in config\n");
 		return -1;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(opts); i++) {
+	for (i = 0; i < ARRAY_SIZE(acs_info); i++) {
 		const char *val = tb[i] ? tb[i]->v.string : NULL;
 
-		if (!val && !acs_info[i])
-			continue;
-
-		if (val && acs_info[i] && !strcmp(val, acs_info[i]))
-			continue;
-
 		free(acs_info[i]);
-		acs_info[i] = strdup(val);
-		ret = 1;
+		acs_info[i] = val ? strdup(val) : NULL;
 	}
 
+	return 0;
+}
+
+int cwmp_set_acs_config(char *info[3])
+{
+	struct uci_ptr ptr = {};
+	int i;
+
+	if (cwmp_get_config_section(&ptr))
+		return -1;
+
+	for (i = 0; i < ARRAY_SIZE(acs_info); i++) {
+		ptr.o = NULL;
+
+		ptr.option = info[i];
+
+		uci_lookup_ptr(uci_ctx, &ptr, NULL, false);
+		if (!ptr.value && !info[i])
+			continue;
+
+		if (ptr.value && info[i] &&
+		    !strcmp(ptr.value, info[i]))
+			continue;
+
+		ptr.value = acs_info[i];
+		if (ptr.value)
+			uci_set(uci_ctx, &ptr);
+		else if (ptr.o)
+			uci_delete(uci_ctx, &ptr);
+	}
+
+	cwmp_flag_event("0 BOOTSTRAP", NULL);
+	if (cwmp_load_config())
+		return -1;
+
+	cwmp_schedule_session();
 	return 0;
 }
 
