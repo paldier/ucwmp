@@ -11,6 +11,8 @@
 #include "session-rpc.h"
 #include "object.h"
 
+bool session_init = true;
+
 static int debug_level = 0;
 static struct uclient *uc;
 static char *buf;
@@ -299,6 +301,7 @@ int main(int argc, char **argv)
 	memset(argv[0], 0, strlen(argv[0]));
 
 	cwmp_commit(true);
+	session_init = false;
 
 	cur_request = soap_init_session();
 	cwmp_send_request();

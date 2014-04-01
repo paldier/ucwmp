@@ -1,10 +1,15 @@
 #include <libubox/utils.h>
 #include <libubox/blobmsg_json.h>
+#include <libubus.h>
 
 #include "session-soap.h"
 #include "session-rpc.h"
 #include "object.h"
 #include "util.h"
+
+static struct ubus_context *ubus_ctx;
+static uint32_t cwmp_id;
+static struct blob_buf b;
 
 enum {
 	SERVER_PARAM_URL,
@@ -21,6 +26,12 @@ static const char *server_param_names[__SERVER_PARAM_MAX] = {
 	[SERVER_PARAM_PASSWORD] = "Password",
 };
 
+static const char *acs_param_names[__SERVER_PARAM_MAX] = {
+	[SERVER_PARAM_URL] = "url",
+	[SERVER_PARAM_USERNAME] = "username",
+	[SERVER_PARAM_PASSWORD] = "password",
+};
+
 static int server_commit(struct cwmp_object *obj)
 {
 	const char *username = server_params[SERVER_PARAM_USERNAME];
@@ -28,9 +39,21 @@ static int server_commit(struct cwmp_object *obj)
 	const char *url = server_params[SERVER_PARAM_URL];
 	char *auth_str = NULL;
 	int len;
+	int i;
 
 	if (!url)
 		return -1;
+
+	blob_buf_init(&b, 0);
+	for (i = 0; i < __SERVER_PARAM_MAX; i++) {
+		if (!server_params[i])
+			continue;
+
+		blobmsg_add_string(&b, acs_param_names[i], server_params[i]);
+	}
+
+	if (!session_init)
+		ubus_invoke(ubus_ctx, cwmp_id, "acs_set_url", b.head, NULL, NULL, 0);
 
 	if (!username) {
 		cwmp_update_url(url, NULL);
@@ -142,6 +165,9 @@ void cwmp_add_device_id(node_t *node)
 
 static void __constructor server_init(void)
 {
+	ubus_ctx = ubus_connect(NULL);
+	ubus_lookup_id(ubus_ctx, "cwmp", &cwmp_id);
+
 	cwmp_object_add(&server_object, "ManagementServer", NULL);
 	cwmp_object_add(&devinfo_object, "DeviceInfo", NULL);
 }
