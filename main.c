@@ -194,7 +194,7 @@ int cwmp_set_acs_config(char *info[3])
 	for (i = 0; i < ARRAY_SIZE(acs_info); i++) {
 		ptr.o = NULL;
 
-		ptr.option = info[i];
+		ptr.option = acs_opts[i].name;
 
 		uci_lookup_ptr(uci_ctx, &ptr, NULL, false);
 		if (!ptr.value && !info[i])
@@ -204,12 +204,14 @@ int cwmp_set_acs_config(char *info[3])
 		    !strcmp(ptr.value, info[i]))
 			continue;
 
-		ptr.value = acs_info[i];
+		ptr.value = info[i];
 		if (ptr.value)
 			uci_set(uci_ctx, &ptr);
 		else if (ptr.o)
 			uci_delete(uci_ctx, &ptr);
 	}
+
+	uci_commit(uci_ctx, &ptr.p, false);
 
 	if (cwmp_load_config())
 		return -1;
