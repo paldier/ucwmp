@@ -58,11 +58,6 @@ static struct uloop_timeout save_events = {
 	.cb = __cwmp_save_events,
 };
 
-void cwmp_save_events(void)
-{
-	uloop_timeout_set(&save_events, 1);
-}
-
 static void session_cb(struct uloop_process *c, int ret);
 static struct uloop_process session_proc = {
 	.cb = session_cb
@@ -143,6 +138,13 @@ static void cwmp_schedule_session(void)
 	cwmp_run_session();
 }
 
+void cwmp_events_changed(bool add)
+{
+	if (add)
+		cwmp_schedule_session();
+	uloop_timeout_set(&save_events, 1);
+}
+
 static int cwmp_get_config_section(struct uci_ptr *ptr)
 {
 	static char buf[32];
@@ -209,11 +211,10 @@ int cwmp_set_acs_config(char *info[3])
 			uci_delete(uci_ctx, &ptr);
 	}
 
-	cwmp_flag_event("0 BOOTSTRAP", NULL);
 	if (cwmp_load_config())
 		return -1;
 
-	cwmp_schedule_session();
+	cwmp_flag_event("0 BOOTSTRAP", NULL);
 	return 0;
 }
 

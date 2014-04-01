@@ -60,7 +60,7 @@ void cwmp_clear_pending_events(void)
 {
 	event_pending = 0;
 	event_free_multi(&event_multi_pending);
-	cwmp_save_events();
+	cwmp_events_changed(false);
 }
 
 char *cwmp_state_get_events(bool pending)
@@ -147,7 +147,7 @@ void cwmp_flag_event(const char *id, const char *command_key)
 	return;
 
 out:
-	cwmp_save_events();
+	cwmp_events_changed(true);
 }
 
 void cwmp_load_events(const char *filename)

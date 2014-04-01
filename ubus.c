@@ -4,6 +4,14 @@
 
 static struct ubus_context *ctx;
 
+static int
+cwmp_connection_request(struct ubus_context *ctx, struct ubus_object *obj,
+			struct ubus_request_data *req, const char *method,
+			struct blob_attr *msg)
+{
+	cwmp_flag_event("6 CONNECTION REQUEST", NULL);
+	return 0;
+}
 
 static int
 cwmp_event_sent(struct ubus_context *ctx, struct ubus_object *obj,
@@ -68,6 +76,7 @@ cwmp_acs_set_url(struct ubus_context *ctx, struct ubus_object *obj,
 }
 
 static struct ubus_method cwmp_methods[] = {
+	UBUS_METHOD_NOARG("connection_request", cwmp_connection_request ),
 	UBUS_METHOD_NOARG("event_sent", cwmp_event_sent),
 	UBUS_METHOD("event_add", cwmp_event_add, event_policy ),
 	UBUS_METHOD("acs_set_url", cwmp_acs_set_url, acs_policy ),
