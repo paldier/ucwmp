@@ -52,7 +52,7 @@ static int cwmp_add_obj_parameter_value(struct path_iterate *it, struct cwmp_obj
 		return 0;
 
 	if (!value)
-		return 0;
+		value = "";
 
 	if (obj->param_types)
 		type = obj->param_types[i];
