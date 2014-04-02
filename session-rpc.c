@@ -75,13 +75,15 @@ static int cwmp_add_parameter_value(node_t *node, const char *name)
 static int cwmp_handle_get_parameter_values(struct rpc_data *data)
 {
 	node_t *node, *cur_node;
-	char *cur;
+	char *cur = NULL;
 	int n_values = 0;
 
 	node = roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:GetParameterValuesResponse", NULL);
 	node = cwmp_open_array(node, "ParameterList");
 
 	cur_node = soap_array_start(data->in, "ParameterNames", NULL);
+	if (!cur_node)
+		return CWMP_ERROR_INVALID_PARAM;
 
 	while (soap_array_iterate_contents(&cur_node, "string", &cur))
 		n_values += cwmp_add_parameter_value(node, cur);
