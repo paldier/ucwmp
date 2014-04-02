@@ -28,15 +28,18 @@ static const char *devinfo_path = CWMP_INFO_FILE;
 static const char *config_path = CWMP_CONFIG_DIR;
 static const char *events_file = CWMP_EVENT_FILE;
 
-static char *acs_info[3];
-
 static bool session_pending;
 static int debug_level;
 
-static const struct uci_parse_option acs_opts[] = {
-	{ "url", UCI_TYPE_STRING },
-	{ "username", UCI_TYPE_STRING },
-	{ "password", UCI_TYPE_STRING },
+struct cwmp_config config;
+
+static const struct uci_parse_option server_opts[__SERVER_INFO_MAX] = {
+	[SERVER_INFO_URL] = { "url", UCI_TYPE_STRING },
+	[SERVER_INFO_USERNAME] = { "username", UCI_TYPE_STRING },
+	[SERVER_INFO_PASSWORD] = { "password", UCI_TYPE_STRING },
+
+	[SERVER_INFO_PERIODIC_INTERVAL] = { "periodic_interval", UCI_TYPE_STRING },
+	[SERVER_INFO_PERIODIC_ENABLED] = { "periodic_enabled", UCI_TYPE_STRING },
 };
 
 static void __cwmp_save_events(struct uloop_timeout *timeout)
@@ -83,16 +86,16 @@ static void cwmp_exec_session(const char *event_data)
 	};
 	int argc = 7;
 
-	if (acs_info[1]) {
+	if (config.acs_info[1]) {
 		argv[argc++] = "-u";
-		argv[argc++] = acs_info[1];
+		argv[argc++] = config.acs_info[1];
 	}
-	if (acs_info[2]) {
+	if (config.acs_info[2]) {
 		argv[argc++] = "-p";
-		argv[argc++] = acs_info[2];
+		argv[argc++] = config.acs_info[2];
 	}
 
-	argv[argc++] = acs_info[0];
+	argv[argc++] = config.acs_info[0];
 	snprintf(debug_str, sizeof(debug_str), "%d", debug_level);
 	execvp(argv[0], (char * const *) argv);
 	exit(255);
@@ -138,6 +141,26 @@ static void cwmp_schedule_session(void)
 	cwmp_run_session();
 }
 
+static void cwmp_update_session_timer(void);
+static void __cwmp_session_timer(struct uloop_timeout *timeout)
+{
+	cwmp_schedule_session();
+	cwmp_flag_event("2 PERIODIC", NULL);
+	cwmp_update_session_timer();
+}
+
+static void cwmp_update_session_timer(void)
+{
+	static struct uloop_timeout timer = {
+		.cb = __cwmp_session_timer,
+	};
+
+	if (config.periodic_interval && config.periodic_enabled)
+		uloop_timeout_set(&timer, config.periodic_interval * 1000);
+	else
+		uloop_timeout_cancel(&timer);
+}
+
 void cwmp_events_changed(bool add)
 {
 	if (add)
@@ -160,30 +183,58 @@ static int cwmp_get_config_section(struct uci_ptr *ptr)
 
 static int cwmp_load_config(void)
 {
-	struct uci_option *tb[3];
+	struct uci_option *tb[__SERVER_INFO_MAX], *cur;
 	struct uci_ptr ptr = {};
 	int i;
+
+	memset(&config, 0, sizeof(config));
 
 	if (cwmp_get_config_section(&ptr))
 		return -1;
 
-	uci_parse_section(ptr.s, acs_opts, ARRAY_SIZE(acs_opts), tb);
-	if (!tb[0]) {
+	uci_parse_section(ptr.s, server_opts, ARRAY_SIZE(server_opts), tb);
+	if (!tb[SERVER_INFO_URL]) {
 		fprintf(stderr, "ACS URL not found in config\n");
 		return -1;
 	}
 
-	for (i = 0; i < ARRAY_SIZE(acs_info); i++) {
+	for (i = 0; i <= SERVER_INFO_PASSWORD; i++) {
 		const char *val = tb[i] ? tb[i]->v.string : NULL;
 
-		free(acs_info[i]);
-		acs_info[i] = val ? strdup(val) : NULL;
+		config.acs_info[i - SERVER_INFO_URL] = val;
 	}
+
+	if ((cur = tb[SERVER_INFO_PERIODIC_INTERVAL]))
+		config.periodic_interval = atoi(cur->v.string);
+
+	if ((cur = tb[SERVER_INFO_PERIODIC_ENABLED]))
+		config.periodic_enabled = atoi(cur->v.string);
 
 	return 0;
 }
 
-int cwmp_set_acs_config(char *info[3])
+static void cwmp_set_string_option(struct uci_ptr *ptr, const char *name, const char *val)
+{
+	ptr->o = NULL;
+	ptr->option = name;
+	uci_lookup_ptr(uci_ctx, ptr, NULL, false);
+
+	ptr->value = val;
+	if (ptr->value)
+		uci_set(uci_ctx, ptr);
+	else if (ptr->o)
+		uci_delete(uci_ctx, ptr);
+}
+
+static void cwmp_set_int_option(struct uci_ptr *ptr, const char *name, int val)
+{
+	char buf[16];
+
+	snprintf(buf, sizeof(buf), "%d", val);
+	cwmp_set_string_option(ptr, name, buf);
+}
+
+int cwmp_update_config(enum cwmp_config_change changed)
 {
 	struct uci_ptr ptr = {};
 	int i;
@@ -191,24 +242,18 @@ int cwmp_set_acs_config(char *info[3])
 	if (cwmp_get_config_section(&ptr))
 		return -1;
 
-	for (i = 0; i < ARRAY_SIZE(acs_info); i++) {
-		ptr.o = NULL;
+	switch (changed) {
+	case CONFIG_CHANGE_ACS_INFO:
+		for (i = 0; i < ARRAY_SIZE(server_opts); i++)
+			cwmp_set_string_option(&ptr, server_opts[i].name, config.acs_info[i]);
 
-		ptr.option = acs_opts[i].name;
-
-		uci_lookup_ptr(uci_ctx, &ptr, NULL, false);
-		if (!ptr.value && !info[i])
-			continue;
-
-		if (ptr.value && info[i] &&
-		    !strcmp(ptr.value, info[i]))
-			continue;
-
-		ptr.value = info[i];
-		if (ptr.value)
-			uci_set(uci_ctx, &ptr);
-		else if (ptr.o)
-			uci_delete(uci_ctx, &ptr);
+		cwmp_flag_event("0 BOOTSTRAP", NULL);
+		break;
+	case CONFIG_CHANGE_PERIODIC_INFO:
+		cwmp_set_int_option(&ptr, "periodic_interval", config.periodic_interval);
+		cwmp_set_int_option(&ptr, "periodic_enabled", config.periodic_enabled);
+		cwmp_update_session_timer();
+		break;
 	}
 
 	uci_commit(uci_ctx, &ptr.p, false);
@@ -216,7 +261,6 @@ int cwmp_set_acs_config(char *info[3])
 	if (cwmp_load_config())
 		return -1;
 
-	cwmp_flag_event("0 BOOTSTRAP", NULL);
 	return 0;
 }
 
@@ -276,6 +320,7 @@ int main(int argc, char **argv)
 	cwmp_load_events(events_file);
 	uloop_timeout_cancel(&save_events);
 	cwmp_schedule_session();
+	cwmp_update_session_timer();
 	uloop_run();
 	uloop_done();
 

@@ -53,7 +53,7 @@ static int server_commit(struct cwmp_object *obj)
 	}
 
 	if (!session_init)
-		ubus_invoke(ubus_ctx, cwmp_id, "acs_set_url", b.head, NULL, NULL, 0);
+		ubus_invoke(ubus_ctx, cwmp_id, "server_info_set", b.head, NULL, NULL, 0);
 
 	if (!username) {
 		cwmp_update_url(url, NULL);

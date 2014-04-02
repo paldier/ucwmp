@@ -21,13 +21,36 @@ enum cwmp_event_multi {
 	__EVENT_M_MAX
 };
 
+enum {
+	SERVER_INFO_URL,
+	SERVER_INFO_USERNAME,
+	SERVER_INFO_PASSWORD,
+	SERVER_INFO_PERIODIC_INTERVAL,
+	SERVER_INFO_PERIODIC_ENABLED,
+	__SERVER_INFO_MAX
+};
+
+enum cwmp_config_change {
+	CONFIG_CHANGE_ACS_INFO,
+	CONFIG_CHANGE_PERIODIC_INFO,
+};
+
+struct cwmp_config {
+	const char *acs_info[3];
+
+	int periodic_interval;
+	bool periodic_enabled;
+};
+
+extern struct cwmp_config config;
+
 char *cwmp_state_get_events(bool move_pending);
 void cwmp_flag_event(const char *id, const char *command_key);
 void cwmp_load_events(const char *filename);
 void cwmp_events_changed(bool add);
 void cwmp_clear_pending_events(void);
 
-int cwmp_set_acs_config(char *info[3]);
+int cwmp_update_config(enum cwmp_config_change changed);
 
 int cwmp_ubus_register(void);
 
