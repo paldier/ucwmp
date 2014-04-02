@@ -30,11 +30,11 @@ static const char * const server_params[__MGMT_ATTR_MAX] = {
 };
 
 static const char * const server_types[__MGMT_ATTR_MAX] = {
-	[MGMT_ATTR_URL] = "xs:string",
-	[MGMT_ATTR_USERNAME] = "xs:string",
-	[MGMT_ATTR_PASSWORD] = "xs:string",
-	[MGMT_ATTR_PERIODIC_ENABLED] = "xs:boolean",
-	[MGMT_ATTR_PERIODIC_INTERVAL] = "xs:unsignedInt",
+	[MGMT_ATTR_URL] = "string",
+	[MGMT_ATTR_USERNAME] = "string",
+	[MGMT_ATTR_PASSWORD] = "string",
+	[MGMT_ATTR_PERIODIC_ENABLED] = "boolean",
+	[MGMT_ATTR_PERIODIC_INTERVAL] = "unsignedInt",
 };
 
 static const struct blobmsg_policy server_policy[__MGMT_ATTR_MAX] = {
