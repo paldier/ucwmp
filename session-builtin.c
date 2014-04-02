@@ -12,75 +12,65 @@ static uint32_t cwmp_id;
 static struct blob_buf b;
 
 enum {
-	SERVER_PARAM_URL,
-	SERVER_PARAM_USERNAME,
-	SERVER_PARAM_PASSWORD,
-	__SERVER_PARAM_MAX
+	MGMT_ATTR_URL,
+	MGMT_ATTR_USERNAME,
+	MGMT_ATTR_PASSWORD,
+	__MGMT_ATTR_MAX,
 };
 
-static char *server_params[__SERVER_PARAM_MAX];
-
-static const char *server_param_names[__SERVER_PARAM_MAX] = {
-	[SERVER_PARAM_URL] = "URL",
-	[SERVER_PARAM_USERNAME] = "Username",
-	[SERVER_PARAM_PASSWORD] = "Password",
+static char *server_values[__MGMT_ATTR_MAX];
+static const char * const server_params[__MGMT_ATTR_MAX] = {
+	[MGMT_ATTR_URL] = "URL",
+	[MGMT_ATTR_USERNAME] = "Username",
+	[MGMT_ATTR_PASSWORD] = "Password",
 };
 
-static const char *acs_param_names[__SERVER_PARAM_MAX] = {
-	[SERVER_PARAM_URL] = "url",
-	[SERVER_PARAM_USERNAME] = "username",
-	[SERVER_PARAM_PASSWORD] = "password",
-};
+static void server_receive_values(struct ubus_request *req, int type, struct blob_attr *msg)
+{
+	static const struct blobmsg_policy policy[__MGMT_ATTR_MAX] = {
+		[MGMT_ATTR_URL] = { .name = "url", .type = BLOBMSG_TYPE_STRING },
+		[MGMT_ATTR_USERNAME] = { .name = "username", .type = BLOBMSG_TYPE_STRING },
+		[MGMT_ATTR_PASSWORD] = { .name = "password", .type = BLOBMSG_TYPE_STRING },
+	};
+	struct blob_attr *tb[__MGMT_ATTR_MAX];
+	int i;
+
+	blobmsg_parse(policy, ARRAY_SIZE(policy), tb, blob_data(msg), blob_len(msg));
+	for (i = 0; i < __MGMT_ATTR_MAX; i++) {
+		free(server_values[i]);
+		server_values[i] = tb[i] ? strdup(blobmsg_data(tb[i])) : NULL;
+	}
+}
+
+static void server_load_values(void)
+{
+	ubus_invoke(ubus_ctx, cwmp_id, "server_info_get", b.head,
+		    server_receive_values, NULL, 0);
+}
+
 
 static int server_commit(struct cwmp_object *obj)
 {
-	const char *username = server_params[SERVER_PARAM_USERNAME];
-	const char *password = server_params[SERVER_PARAM_PASSWORD];
-	const char *url = server_params[SERVER_PARAM_URL];
-	char *auth_str = NULL;
-	int len;
 	int i;
 
-	if (!url)
-		return -1;
-
 	blob_buf_init(&b, 0);
-	for (i = 0; i < __SERVER_PARAM_MAX; i++) {
-		if (!server_params[i])
+	for (i = 0; i < ARRAY_SIZE(server_params); i++) {
+		if (!server_values[i])
 			continue;
 
-		blobmsg_add_string(&b, acs_param_names[i], server_params[i]);
+		blobmsg_add_string(&b, server_params[i], server_values[i]);
 	}
 
-	if (!session_init)
-		ubus_invoke(ubus_ctx, cwmp_id, "server_info_set", b.head, NULL, NULL, 0);
-
-	if (!username) {
-		cwmp_update_url(url, NULL);
-		return 0;
-	}
-
-	if (!password) {
-		cwmp_update_url(url, username);
-		return 0;
-	}
-
-	len = strlen(username) + strlen(password) + 2;
-	if (len > 512)
-		return -1;
-
-	auth_str = alloca(len);
-	sprintf(auth_str, "%s:%s", username, password);
-	cwmp_update_url(url, auth_str);
+	ubus_invoke(ubus_ctx, cwmp_id, "server_info_set", b.head, NULL, NULL, 0);
 	return 0;
 }
 
-static unsigned long server_writable = (1 << __SERVER_PARAM_MAX) - 1;
+static unsigned long server_writable = (1 << ARRAY_SIZE(server_params)) - 1;
 
 static struct cwmp_object server_object = {
-	.params = server_param_names,
-	.values = server_params,
-	.n_params = __SERVER_PARAM_MAX,
+	.params = server_params,
+	.values = server_values,
+	.n_params = ARRAY_SIZE(server_params),
 	.writable = &server_writable,
 	.commit = server_commit,
 };
@@ -173,6 +163,7 @@ static void __constructor server_init(void)
 {
 	ubus_ctx = ubus_connect(NULL);
 	ubus_lookup_id(ubus_ctx, "cwmp", &cwmp_id);
+	server_load_values();
 
 	cwmp_object_add(&server_object, "ManagementServer", NULL);
 	cwmp_object_add(&devinfo_object, "DeviceInfo", NULL);

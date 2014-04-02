@@ -20,6 +20,8 @@ static int buf_len, buf_ofs;
 
 static char *cur_request;
 
+static char *url, *username, *password;
+
 static LIST_HEAD(cookies);
 struct blob_buf events;
 
@@ -121,16 +123,14 @@ static void cwmp_dump_message(const char *msg, const char *data)
 
 static void __cwmp_send_request(struct uloop_timeout *t)
 {
-	struct uclient *cl = uc;
-
 	cwmp_dump_message("Send CPE data", cur_request);
 
-	uclient_connect(cl);
-	uclient_http_set_request_type(cl, "POST");
-	cwmp_add_cookies(cl);
+	uclient_connect(uc);
+	uclient_http_set_request_type(uc, "POST");
+	cwmp_add_cookies(uc);
 	if (cur_request)
-		uclient_write(cl, cur_request, strlen(cur_request));
-	uclient_request(cl);
+		uclient_write(uc, cur_request, strlen(cur_request));
+	uclient_request(uc);
 
 	buf_ofs = 0;
 }
@@ -203,16 +203,28 @@ static void cwmp_error(struct uclient *cl, int code)
 	uloop_end();
 }
 
-void cwmp_update_url(const char *url, const char *auth_str)
+static void cwmp_connect(void)
 {
 	static struct uclient_cb cwmp_cb = {
 		.data_read = cwmp_data_read,
 		.data_eof = cwmp_data_eof,
 		.error = cwmp_error,
 	};
+	char *auth_str;
 
-	if (!uc)
-		uc = uclient_new(url, auth_str, &cwmp_cb);
+	if (uc)
+		return;
+
+	if (!username && !password)
+		auth_str = NULL;
+	else if (!password)
+		auth_str = username;
+	else {
+		auth_str = alloca(strlen(username) + strlen(password) + 2);
+		sprintf(auth_str, "%s:%s", username, password);
+	}
+
+	uc = uclient_new(url, auth_str, &cwmp_cb);
 }
 
 static int usage(const char *progname)
@@ -250,20 +262,9 @@ static int load_events(const char *data)
 	return 0;
 }
 
-static void cwmp_set_management_param(const char *name, const char *value)
-{
-	char path[CWMP_PATH_LEN];
-
-	sprintf(path, "%s.%s.%s", cwmp_object_name(&root_object),
-		"ManagementServer", name);
-
-	cwmp_param_set(path, value);
-}
-
 int main(int argc, char **argv)
 {
 	const char *progname = argv[0];
-	const char *var;
 	int ch;
 
 	uloop_init();
@@ -281,9 +282,10 @@ int main(int argc, char **argv)
 				return 1;
 			break;
 		case 'u':
+			username = optarg;
+			break;
 		case 'p':
-			var = (ch == 'u' ? "Username" : "Password");
-			cwmp_set_management_param(var, optarg);
+			password = strdup(optarg);
 			memset(optarg, 0, strlen(optarg));
 			break;
 		default:
@@ -297,11 +299,9 @@ int main(int argc, char **argv)
 	if (argc != 1)
 		return usage(progname);
 
-	cwmp_set_management_param("URL", argv[0]);
-	memset(argv[0], 0, strlen(argv[0]));
-
-	cwmp_commit(true);
+	url = argv[0];
 	session_init = false;
+	cwmp_connect();
 
 	cur_request = soap_init_session();
 	cwmp_send_request();

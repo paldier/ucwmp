@@ -10,8 +10,8 @@ struct cwmp_object {
 	struct cwmp_object *parent;
 	struct avl_tree objects;
 
-	const char **params;
-	const char **param_types;
+	const char * const *params;
+	const char * const *param_types;
 	char **prev_values;
 	char **values;
 	int n_params;
