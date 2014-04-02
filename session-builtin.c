@@ -15,6 +15,8 @@ enum {
 	MGMT_ATTR_URL,
 	MGMT_ATTR_USERNAME,
 	MGMT_ATTR_PASSWORD,
+	MGMT_ATTR_PERIODIC_ENABLED,
+	MGMT_ATTR_PERIODIC_INTERVAL,
 	__MGMT_ATTR_MAX,
 };
 
@@ -23,22 +25,52 @@ static const char * const server_params[__MGMT_ATTR_MAX] = {
 	[MGMT_ATTR_URL] = "URL",
 	[MGMT_ATTR_USERNAME] = "Username",
 	[MGMT_ATTR_PASSWORD] = "Password",
+	[MGMT_ATTR_PERIODIC_ENABLED] = "PeriodicInformEnable",
+	[MGMT_ATTR_PERIODIC_INTERVAL] = "PeriodicInformInterval",
+};
+
+static const char * const server_types[__MGMT_ATTR_MAX] = {
+	[MGMT_ATTR_URL] = "xs:string",
+	[MGMT_ATTR_USERNAME] = "xs:string",
+	[MGMT_ATTR_PASSWORD] = "xs:string",
+	[MGMT_ATTR_PERIODIC_ENABLED] = "xs:boolean",
+	[MGMT_ATTR_PERIODIC_INTERVAL] = "xs:unsignedInt",
+};
+
+static const struct blobmsg_policy server_policy[__MGMT_ATTR_MAX] = {
+	[MGMT_ATTR_URL] = { .name = "url", .type = BLOBMSG_TYPE_STRING },
+	[MGMT_ATTR_USERNAME] = { .name = "username", .type = BLOBMSG_TYPE_STRING },
+	[MGMT_ATTR_PASSWORD] = { .name = "password", .type = BLOBMSG_TYPE_STRING },
+	[MGMT_ATTR_PERIODIC_ENABLED] = { .name = "periodic_enabled", .type = BLOBMSG_TYPE_INT8 },
+	[MGMT_ATTR_PERIODIC_INTERVAL] = { .name = "periodic_interval", .type = BLOBMSG_TYPE_INT32 },
 };
 
 static void server_receive_values(struct ubus_request *req, int type, struct blob_attr *msg)
 {
-	static const struct blobmsg_policy policy[__MGMT_ATTR_MAX] = {
-		[MGMT_ATTR_URL] = { .name = "url", .type = BLOBMSG_TYPE_STRING },
-		[MGMT_ATTR_USERNAME] = { .name = "username", .type = BLOBMSG_TYPE_STRING },
-		[MGMT_ATTR_PASSWORD] = { .name = "password", .type = BLOBMSG_TYPE_STRING },
-	};
 	struct blob_attr *tb[__MGMT_ATTR_MAX];
 	int i;
 
-	blobmsg_parse(policy, ARRAY_SIZE(policy), tb, blob_data(msg), blob_len(msg));
+	blobmsg_parse(server_policy, ARRAY_SIZE(server_policy), tb, blob_data(msg), blob_len(msg));
 	for (i = 0; i < __MGMT_ATTR_MAX; i++) {
 		free(server_values[i]);
-		server_values[i] = tb[i] ? strdup(blobmsg_data(tb[i])) : NULL;
+		server_values[i] = NULL;
+
+		if (!tb[i])
+			continue;
+
+		switch (server_policy[i].type) {
+		case BLOBMSG_TYPE_STRING:
+			server_values[i] = strdup(blobmsg_data(tb[i]));
+			break;
+		case BLOBMSG_TYPE_INT32:
+			asprintf(&server_values[i], "%d", blobmsg_get_u32(tb[i]));
+			break;
+		case BLOBMSG_TYPE_INT8:
+			asprintf(&server_values[i], "%d", blobmsg_get_bool(tb[i]));
+			break;
+		default:
+			break;
+		}
 	}
 }
 
@@ -58,7 +90,19 @@ static int server_commit(struct cwmp_object *obj)
 		if (!server_values[i])
 			continue;
 
-		blobmsg_add_string(&b, server_params[i], server_values[i]);
+		switch (server_policy[i].type) {
+		case BLOBMSG_TYPE_STRING:
+			blobmsg_add_string(&b, server_params[i], server_values[i]);
+			break;
+		case BLOBMSG_TYPE_INT32:
+			blobmsg_add_u32(&b, server_params[i], atoi(server_values[i]));
+			break;
+		case BLOBMSG_TYPE_INT8:
+			blobmsg_add_u8(&b, server_params[i], !!atoi(server_values[i]));
+			break;
+		default:
+			break;
+		}
 	}
 
 	ubus_invoke(ubus_ctx, cwmp_id, "server_info_set", b.head, NULL, NULL, 0);
@@ -69,6 +113,7 @@ static unsigned long server_writable = (1 << ARRAY_SIZE(server_params)) - 1;
 
 static struct cwmp_object server_object = {
 	.params = server_params,
+	.param_types = server_types,
 	.values = server_values,
 	.n_params = ARRAY_SIZE(server_params),
 	.writable = &server_writable,
