@@ -230,7 +230,7 @@ bool soap_array_iterate(node_t **cur, const char *type, node_t **node)
 	if (!cur || !*cur)
 		return false;
 
-	if (!soap_node_check_type(*node, type))
+	if (!soap_node_check_type(*cur, type))
 		return false;
 
 	*node = *cur;
