@@ -123,21 +123,22 @@ static void cwmp_dump_message(const char *msg, const char *data)
 
 static void __cwmp_send_request(struct uloop_timeout *t)
 {
+	int len = 0;
 	cwmp_dump_message("Send CPE data", cur_request);
 
 	uclient_connect(uc);
 	uclient_http_set_request_type(uc, "POST");
 	cwmp_add_cookies(uc);
-	if (cur_request) {
-		int len = strlen(cur_request);
 
-		if (len > 0) {
-			uclient_http_set_header(uc, "SOAPAction", "");
-			uclient_http_set_header(uc, "Content-Type", "text/xml");
-		}
+	if (cur_request)
+		len = strlen(cur_request);
 
+	if (len > 0) {
+		uclient_http_set_header(uc, "SOAPAction", "");
+		uclient_http_set_header(uc, "Content-Type", "text/xml");
 		uclient_write(uc, cur_request, len);
 	}
+
 	uclient_request(uc);
 
 	buf_ofs = 0;
