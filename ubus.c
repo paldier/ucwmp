@@ -79,13 +79,23 @@ cwmp_server_info_get(struct ubus_context *ctx, struct ubus_object *obj,
 
 static void cwmp_server_info_set_url(struct blob_attr **tb)
 {
+	bool changed = false;
 	int i;
 
-	for (i = SERVER_INFO_URL; i <= SERVER_INFO_PASSWORD; i++)
-		config.acs_info[i - SERVER_INFO_URL] =
-			tb[i] ? blobmsg_data(tb[i]) : NULL;
+	for (i = SERVER_INFO_URL; i <= SERVER_INFO_PASSWORD; i++) {
+		const char *old = config.acs_info[i - SERVER_INFO_URL];
+		const char *new = tb[i] ? blobmsg_data(tb[i]) : NULL;
 
-	cwmp_update_config(CONFIG_CHANGE_ACS_INFO);
+		config.acs_info[i - SERVER_INFO_URL] = new;
+
+		if (!!old != !!new)
+			changed = true;
+		else if (old && new && strcmp(old, new) != 0)
+			changed = true;
+	}
+
+	if (changed)
+		cwmp_update_config(CONFIG_CHANGE_ACS_INFO);
 }
 
 
