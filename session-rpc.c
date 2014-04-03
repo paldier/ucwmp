@@ -196,7 +196,6 @@ static int cwmp_handle_get_parameter_names(struct rpc_data *data)
 	};
 	bool next_level = false;
 	node_t *node;
-	int ret = 0;
 	int n_params;
 
 	node = data->in;
@@ -217,7 +216,7 @@ static int cwmp_handle_get_parameter_names(struct rpc_data *data)
 		return it.error;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int cwmp_handle_get_parameter_attributes(struct rpc_data *data)
