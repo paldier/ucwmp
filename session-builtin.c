@@ -87,18 +87,21 @@ static int server_commit(struct cwmp_object *obj)
 
 	blob_buf_init(&b, 0);
 	for (i = 0; i < ARRAY_SIZE(server_params); i++) {
-		if (!server_values[i])
+		const char *name = server_policy[i].name;
+		const char *value = server_values[i];
+
+		if (!value)
 			continue;
 
 		switch (server_policy[i].type) {
 		case BLOBMSG_TYPE_STRING:
-			blobmsg_add_string(&b, server_params[i], server_values[i]);
+			blobmsg_add_string(&b, name, value);
 			break;
 		case BLOBMSG_TYPE_INT32:
-			blobmsg_add_u32(&b, server_params[i], atoi(server_values[i]));
+			blobmsg_add_u32(&b, name, atoi(value));
 			break;
 		case BLOBMSG_TYPE_INT8:
-			blobmsg_add_u8(&b, server_params[i], !!atoi(server_values[i]));
+			blobmsg_add_u8(&b, name, !!atoi(value));
 			break;
 		default:
 			break;
