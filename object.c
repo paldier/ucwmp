@@ -230,7 +230,7 @@ static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj,
 		obj->fetch_objects(obj);
 
 	avl_for_each_element(&obj->objects, cur, node) {
-		int ofs_cur = fill_path(it, ofs, cwmp_object_name(obj));
+		int ofs_cur = fill_path(it, ofs, cwmp_object_name(cur));
 
 		strcpy(it->path + ofs_cur, ".");
 		ofs_cur++;
