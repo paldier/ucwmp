@@ -2,5 +2,5 @@
 config cwmp 'foo'
 	option url 'http://acs:8080/openacs/acs'
 	option periodic_enabled '1'
-	option periodic_interval '4'
+	option periodic_interval '1800'
 
