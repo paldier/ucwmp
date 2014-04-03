@@ -244,7 +244,7 @@ int cwmp_update_config(enum cwmp_config_change changed)
 
 	switch (changed) {
 	case CONFIG_CHANGE_ACS_INFO:
-		for (i = 0; i < ARRAY_SIZE(server_opts); i++)
+		for (i = 0; i < ARRAY_SIZE(config.acs_info); i++)
 			cwmp_set_string_option(&ptr, server_opts[i].name, config.acs_info[i]);
 
 		cwmp_flag_event("0 BOOTSTRAP", NULL);
