@@ -210,7 +210,7 @@ static int cwmp_handle_get_parameter_names(struct rpc_data *data)
 
 	it.node = cwmp_open_array(node, "ParameterList");
 	n_params = cwmp_path_iterate(&it, next_level);
-	cwmp_close_array(it.node, n_params, "cwmp:ParameterValueStruct");
+	cwmp_close_array(it.node, n_params, "cwmp:ParameterInfoStruct");
 
 	if (it.error) {
 		roxml_del_node(node);
