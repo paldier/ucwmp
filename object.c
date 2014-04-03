@@ -226,7 +226,9 @@ static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj,
 		n += it->cb(it, obj, i);
 	}
 
-	obj->fetch_objects(obj);
+	if (obj->fetch_objects)
+		obj->fetch_objects(obj);
+
 	avl_for_each_element(&obj->objects, cur, node) {
 		int ofs_cur = fill_path(it, ofs, obj->node.key);
 
