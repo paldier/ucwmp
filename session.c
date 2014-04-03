@@ -128,8 +128,16 @@ static void __cwmp_send_request(struct uloop_timeout *t)
 	uclient_connect(uc);
 	uclient_http_set_request_type(uc, "POST");
 	cwmp_add_cookies(uc);
-	if (cur_request)
-		uclient_write(uc, cur_request, strlen(cur_request));
+	if (cur_request) {
+		int len = strlen(cur_request);
+
+		if (len > 0) {
+			uclient_http_set_header(uc, "SOAPAction", "");
+			uclient_http_set_header(uc, "Content-Type", "text/xml");
+		}
+
+		uclient_write(uc, cur_request, len);
+	}
 	uclient_request(uc);
 
 	buf_ofs = 0;
