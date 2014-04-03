@@ -105,7 +105,7 @@ static int cwmp_handle_set_parameter_values(struct rpc_data *data)
 	int error = 0;
 	int i;
 
-	cur_node = soap_array_start(data->in, "ParameterNames", &len);
+	cur_node = soap_array_start(data->in, "ParameterList", &len);
 	if (!cur_node)
 		return CWMP_ERROR_INVALID_PARAM;
 
