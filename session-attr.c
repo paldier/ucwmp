@@ -12,6 +12,17 @@ char *attr_cache_file = NULL;
 static AVL_TREE(attr_cache, avl_strcmp, false, NULL);
 static struct blob_buf b;
 
+static bool cwmp_attr_is_default(struct param_attr *attr)
+{
+	if (!attr->acl_subscriber)
+		return false;
+
+	if (attr->notification)
+		return false;
+
+	return true;
+}
+
 struct param_attr *cwmp_attr_cache_get(const char *name)
 {
 	struct param_attr *attr;
@@ -115,6 +126,9 @@ bool cwmp_attr_cache_load(void)
 static void add_attr(struct param_attr *attr)
 {
 	void *c;
+
+	if (cwmp_attr_is_default(attr))
+		return;
 
 	c = blobmsg_open_array(&b, NULL);
 	blobmsg_add_string(&b, NULL, attr->node.key);
