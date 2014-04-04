@@ -201,6 +201,29 @@ int cwmp_param_set(const char *name, const char *value)
 	return obj->set_param(obj, i, value);
 }
 
+const char *cwmp_param_get(const char *name)
+{
+	struct cwmp_object *obj;
+	const char *value, *param_str;
+	int i;
+
+	obj = cwmp_object_get(NULL, name, &param_str);
+	if (!obj)
+		return NULL;
+
+	if (!obj->get_param)
+		return NULL;
+
+	i = cwmp_object_get_param_idx(obj, param_str);
+	if (i < 0)
+		return NULL;
+
+	if (obj->get_param(obj, i, &value))
+		return NULL;
+
+	return value;
+}
+
 static int fill_path(struct path_iterate *it, int ofs, const char *name)
 {
 	int len = strlen(name);
