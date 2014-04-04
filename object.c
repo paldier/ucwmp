@@ -201,7 +201,7 @@ int cwmp_param_set(const char *name, const char *value)
 	return obj->set_param(obj, i, value);
 }
 
-const char *cwmp_param_get(const char *name)
+const char *cwmp_param_get(const char *name, const char **type)
 {
 	struct cwmp_object *obj;
 	const char *value, *param_str;
@@ -217,6 +217,9 @@ const char *cwmp_param_get(const char *name)
 	i = cwmp_object_get_param_idx(obj, param_str);
 	if (i < 0)
 		return NULL;
+
+	if (type)
+		*type = obj->param_types ? obj->param_types[i] : NULL;
 
 	if (obj->get_param(obj, i, &value))
 		return NULL;

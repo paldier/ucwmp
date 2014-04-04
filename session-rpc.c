@@ -26,7 +26,7 @@ static void cwmp_close_array(node_t *node, int n_values, const char *type)
 	roxml_add_node(node, 0, ROXML_ATTR_NODE, "soap-enc:arrayType", buf);
 }
 
-static void cwmp_add_parameter_value_struct(node_t *node, const char *name, const char *value, const char *type)
+void cwmp_add_parameter_value_struct(node_t *node, const char *name, const char *value, const char *type)
 {
 	struct xml_kv kv[2] = {
 		{ "Name", name },
@@ -420,6 +420,8 @@ static void cwmp_add_inform_parameters(node_t *node)
 		strcpy(cur1, mgmt_params[i]);
 		n += cwmp_add_parameter_value(node, path);
 	}
+
+	n += cwmp_attr_cache_add_changed(node);
 
 	cwmp_close_array(node, n, "ParameterValueStruct");
 }

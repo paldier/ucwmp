@@ -38,7 +38,7 @@ extern struct cwmp_object root_object;
 int cwmp_path_iterate(struct path_iterate *it, bool next);
 
 int cwmp_param_set(const char *name, const char *value);
-const char *cwmp_param_get(const char *name);
+const char *cwmp_param_get(const char *name, const char **type);
 void cwmp_commit(bool apply);
 
 int cwmp_object_add(struct cwmp_object *obj, const char *name, struct cwmp_object *parent);

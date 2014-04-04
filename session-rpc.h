@@ -64,4 +64,6 @@ void cwmp_update_url(const char *url, const char *auth_str);
 void cwmp_load_events(const char *filename);
 void cwmp_clear_pending_events(void);
 
+void cwmp_add_parameter_value_struct(node_t *node, const char *name, const char *value, const char *type);
+
 #endif

@@ -15,19 +15,20 @@ static struct blob_buf b;
 struct param_attr *cwmp_attr_cache_get(const char *name)
 {
 	struct param_attr *attr;
-	const char *value;
+	const char *value, *type;
 	char *name_buf;
 
 	attr = avl_find_element(&attr_cache, name, attr, node);
 	if (attr)
 		return attr;
 
-	value = cwmp_param_get(name);
+	value = cwmp_param_get(name, &type);
 	if (!value)
 		return NULL;
 
 	attr = calloc_a(sizeof(*attr) + strlen(value) + 1,
 			&name_buf, strlen(name) + 1);
+	attr->type = type;
 	strcpy(attr->value, value);
 	attr->node.key = strcpy(name_buf, name);
 	attr->acl_subscriber = true;
@@ -72,7 +73,8 @@ static bool cwmp_attr_cache_parse(struct blob_attr *data)
 	if (!attr->notification)
 		return false;
 
-	return strcmp(attr->value, blobmsg_data(tb[ATTR_CACHE_VALUE])) != 0;
+	attr->changed = strcmp(attr->value, blobmsg_data(tb[ATTR_CACHE_VALUE])) != 0;
+	return attr->changed;
 }
 
 bool cwmp_attr_cache_load(void)
@@ -148,4 +150,20 @@ void cwmp_attr_cache_save(void)
 		fclose(f);
 	}
 	free(str);
+}
+
+int cwmp_attr_cache_add_changed(node_t *node)
+{
+	struct param_attr *attr;
+	int n = 0;
+
+	avl_for_each_element(&attr_cache, attr, node) {
+		if (!attr->changed)
+			continue;
+
+		n++;
+		cwmp_add_parameter_value_struct(node, attr->node.key, attr->value, attr->type);
+	}
+
+	return n;
 }
