@@ -9,6 +9,7 @@
 
 #include "session-soap.h"
 #include "session-rpc.h"
+#include "session-attr.h"
 #include "object.h"
 
 bool session_init = true;
@@ -242,6 +243,7 @@ static int usage(const char *progname)
 		"Options:\n"
 		"	-I <file>:      Load device info from <file>\n"
 		"	-e <json>:      Load events from JSON string\n"
+		"	-a <file>:		Set attribute cache filename to <file>\n"
 		"	-d <level>:     Set debug level\n"
 		"	-u <username>:  Set ACS username\n"
 		"	-p <password>:  Set ACS password\n"
@@ -280,6 +282,9 @@ int main(int argc, char **argv)
 
 	while ((ch = getopt(argc, argv, "d:I:e:")) != -1) {
 		switch (ch) {
+		case 'a':
+			attr_cache_file = optarg;
+			break;
 		case 'd':
 			debug_level = atoi(optarg);
 			break;

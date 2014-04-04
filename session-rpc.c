@@ -8,6 +8,7 @@
 
 #include "session-soap.h"
 #include "session-rpc.h"
+#include "session-attr.h"
 #include "object.h"
 
 struct blob_buf events;
@@ -224,9 +225,69 @@ static int cwmp_handle_get_parameter_attributes(struct rpc_data *data)
 	return CWMP_ERROR_REQUEST_DENIED;
 }
 
+static int cwmp_set_param_attr(node_t *node)
+{
+	struct param_attr *attr;
+	char buf[CWMP_PATH_LEN];
+	bool val;
+
+	if (!__soap_get_field(node, "Name", buf, sizeof(buf)))
+		return CWMP_ERROR_INVALID_PARAM;
+
+	attr = cwmp_attr_cache_get(buf);
+	if (!attr)
+		return CWMP_ERROR_INVALID_PARAM;
+
+	if (!soap_get_boolean_field(node, "NotificationChange", &val) && val) {
+		int intval;
+
+		if (soap_get_int_field(node, "Notification", &intval))
+			return CWMP_ERROR_INVALID_PARAM;
+
+		if (intval > 6)
+			return CMWP_ERROR_INVALID_PARAM_VAL;
+
+		attr->notification = intval;
+	}
+
+	if (!soap_get_boolean_field(node, "AccessListChange", &val) && val) {
+		char *str;
+		node_t *cur;
+
+		attr->acl_subscriber = false;
+
+		cur = soap_array_start(node, "AccessList", NULL);
+		while (soap_array_iterate_contents(&cur, "string", &str)) {
+			if (!strcmp(str, "Subscriber"))
+				attr->acl_subscriber = true;
+		}
+	}
+
+	return 0;
+}
+
 static int cwmp_handle_set_parameter_attributes(struct rpc_data *data)
 {
-	return CWMP_ERROR_REQUEST_DENIED;
+	node_t *node, *cur_node;
+	int ret;
+
+	cur_node = soap_array_start(data->in, "ParameterList", NULL);
+	if (!cur_node)
+		return CWMP_ERROR_INVALID_PARAM;
+
+	while (soap_array_iterate(&cur_node, "SetParameterAttributesStruct", &node)) {
+		ret = cwmp_set_param_attr(node);
+		if (ret) {
+			/* discard any changes and reload the attribute cache */
+			cwmp_attr_cache_load();
+			break;
+		}
+	}
+
+	if (!ret)
+		cwmp_attr_cache_save();
+
+	return ret;
 }
 
 static int cwmp_handle_add_object(struct rpc_data *data)
@@ -363,18 +424,25 @@ static void cwmp_add_inform_parameters(node_t *node)
 	cwmp_close_array(node, n, "ParameterValueStruct");
 }
 
+static int cwmp_add_event(node_t *node, const char *code, const char *key)
+{
+	struct xml_kv ev_kv[2] = {
+		{ "EventCode", code },
+		{ "CommandKey", key },
+	};
 
-static int cwmp_add_event(node_t *node, struct blob_attr *ev)
+	node = roxml_add_node(node, 0, ROXML_ELM_NODE, "EventStruct", NULL);
+	xml_add_multi(node, ROXML_ELM_NODE, ARRAY_SIZE(ev_kv), ev_kv, NULL);
+	return 1;
+}
+
+static int cwmp_add_event_blob(node_t *node, struct blob_attr *ev)
 {
 	static const struct blobmsg_policy ev_policy[2] = {
 		{ .type = BLOBMSG_TYPE_STRING },
 		{ .type = BLOBMSG_TYPE_STRING },
 	};
 	struct blob_attr *ev_attr[2];
-	struct xml_kv ev_kv[2] = {
-		{ "EventCode" },
-		{ "CommandKey" },
-	};
 	const char *val = "";
 
 	if (blobmsg_type(ev) != BLOBMSG_TYPE_ARRAY)
@@ -388,36 +456,38 @@ static int cwmp_add_event(node_t *node, struct blob_attr *ev)
 	if (ev_attr[1])
 		val = blobmsg_data(ev_attr[1]);
 
-	ev_kv[0].value = blobmsg_data(ev_attr[0]);
-	ev_kv[1].value = val;
-
-	node = roxml_add_node(node, 0, ROXML_ELM_NODE, "EventStruct", NULL);
-	xml_add_multi(node, ROXML_ELM_NODE, ARRAY_SIZE(ev_kv), ev_kv, NULL);
-	return 1;
+	return cwmp_add_event(node, blobmsg_data(ev_attr[0]), val);
 }
 
-static void cwmp_add_inform_events(node_t *node)
+static void cwmp_add_inform_events(node_t *node, bool changed)
 {
 	struct blob_attr *ev = NULL;
 	int n = 0;
 
 	node = cwmp_open_array(node, "Event");
+
 	if (events.head) {
 		struct blob_attr *cur;
 		int rem;
 
 		ev = blob_data(events.head);
 		blobmsg_for_each_attr(cur, ev, rem)
-			n += cwmp_add_event(node, cur);
+			n += cwmp_add_event_blob(node, cur);
 	}
+
+	if (changed)
+		n += cwmp_add_event(node, "4 VALUE CHANGED", "");
+
 	cwmp_close_array(node, n, "EventStruct");
 }
 
 int cwmp_session_init(struct rpc_data *data)
 {
-	node_t *node;
 	time_t now = time(NULL);
+	node_t *node;
+	bool changed;
 
+	changed = cwmp_attr_cache_load();
 	node = roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:Inform", NULL);
 
 	roxml_add_node(node, 0, ROXML_ELM_NODE, "MaxEnvelopes", "1");
@@ -425,7 +495,7 @@ int cwmp_session_init(struct rpc_data *data)
 	soap_add_time(node, "CurrentTime", localtime(&now));
 	cwmp_add_device_id(node);
 	cwmp_add_inform_parameters(node);
-	cwmp_add_inform_events(node);
+	cwmp_add_inform_events(node, changed);
 
 	return 0;
 }
