@@ -31,7 +31,7 @@ static inline char *soap_get_field(node_t *node, const char *name)
 	return __soap_get_field(node, name, NULL, 0);
 }
 int soap_get_boolean_field(node_t *node, const char *name, bool *val);
-
+int soap_get_int_field(node_t *node, const char *name, int *val);
 
 node_t *soap_array_start(node_t *node, const char *name, int *len);
 bool soap_array_iterate(node_t **cur, const char *type, node_t **node);

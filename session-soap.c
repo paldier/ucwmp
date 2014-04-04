@@ -202,6 +202,21 @@ int soap_get_boolean_field(node_t *node, const char *name, bool *val)
 	return 0;
 }
 
+int soap_get_int_field(node_t *node, const char *name, int *val)
+{
+	char buf[32];
+	char *err;
+
+	if (!__soap_get_field(node, name, buf, sizeof(buf)))
+		return -1;
+
+	*val = strtoul(buf, &err, 0);
+	if (err && *err)
+		return -1;
+
+	return 0;
+}
+
 static bool soap_node_check_type(node_t *node, const char *type)
 {
 	int len = strlen(type) + 1;
