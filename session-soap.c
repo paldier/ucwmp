@@ -219,11 +219,15 @@ int soap_get_int_field(node_t *node, const char *name, int *val)
 
 static bool soap_node_check_type(node_t *node, const char *type)
 {
-	int len = strlen(type) + 1;
+	int len = strlen(type) + 2;
 	char *buf = alloca(len);
 
 	if (!roxml_get_name(node, buf, len))
 		return false;
+
+	/* ignore type parameters */
+	if (buf[len - 1] == '(')
+		buf[len - 1] = 0;
 
 	return !strcmp(buf, type);
 }
