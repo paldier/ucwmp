@@ -22,7 +22,7 @@ ADD_EXECUTABLE(cwmpd main.c state.c ubus.c)
 
 find_library(json NAMES json-c json)
 TARGET_LINK_LIBRARIES(session ubus uclient ubox roxml blobmsg_json ${json})
-TARGET_LINK_LIBRARIES(cwmpd uci ubus ubox blobmsg_json ${json})
+TARGET_LINK_LIBRARIES(cwmpd uci uclient ubus ubox blobmsg_json ${json})
 
 INSTALL(TARGETS session
 	RUNTIME DESTINATION bin

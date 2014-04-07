@@ -1,16 +1,105 @@
+#include <time.h>
+
+#include <libubox/uclient.h>
+#include <libubox/uclient-utils.h>
 #include <libubus.h>
 
 #include "state.h"
 
 static struct ubus_context *ctx;
 static struct blob_buf b;
+static char auth_md5[33];
+
+static const char * const auth_realm = "ucwmp";
+
+enum {
+	CONN_REQ_USERNAME,
+	CONN_REQ_REALM,
+	CONN_REQ_NONCE,
+	CONN_REQ_URI,
+	CONN_REQ_RESPONSE,
+	CONN_REQ_CNONCE,
+	CONN_REQ_NC,
+	__CONN_REQ_MAX,
+};
+
+static const struct blobmsg_policy conn_req_policy[__CONN_REQ_MAX] = {
+	[CONN_REQ_USERNAME] = { "username", BLOBMSG_TYPE_STRING },
+	[CONN_REQ_REALM] = { "realm", BLOBMSG_TYPE_STRING },
+	[CONN_REQ_NONCE] = { "nonce", BLOBMSG_TYPE_STRING },
+	[CONN_REQ_URI] = { "uri", BLOBMSG_TYPE_STRING },
+	[CONN_REQ_RESPONSE] = { "response", BLOBMSG_TYPE_STRING },
+	[CONN_REQ_CNONCE] = { "cnonce", BLOBMSG_TYPE_STRING },
+	[CONN_REQ_NC] = { "nc", BLOBMSG_TYPE_STRING },
+};
+
+static void conn_req_challenge(void)
+{
+	time_t cur = time(NULL);
+	char nonce[9];
+
+	snprintf(nonce, sizeof(nonce), "%08x", (uint32_t) cur);
+	blobmsg_add_string(&b, "nonce", nonce);
+	blobmsg_add_string(&b, "realm", auth_realm);
+}
+
+static bool conn_req_check_digest(struct blob_attr **tb)
+{
+	struct http_digest_data data = {
+		.uri = blobmsg_data(tb[CONN_REQ_URI]),
+		.method = "GET",
+		.auth_hash = auth_md5,
+		.qop = "auth",
+		.nc = blobmsg_data(tb[CONN_REQ_NC]),
+		.nonce = blobmsg_data(tb[CONN_REQ_NONCE]),
+		.cnonce = blobmsg_data(tb[CONN_REQ_CNONCE]),
+	};
+	char md5[33];
+
+	http_digest_calculate_response(md5, &data);
+
+	return !strcmp(blobmsg_data(tb[CONN_REQ_RESPONSE]), md5);
+}
+
+static bool conn_req_validate(struct blob_attr **tb)
+{
+	int i;
+
+	if (!config.local_username || !config.local_password)
+		return false;
+
+	http_digest_calculate_auth_hash(auth_md5, config.local_username,
+					auth_realm, config.local_password);
+
+	for (i = 0; i < __CONN_REQ_MAX; i++) {
+		if (!tb[i])
+			return false;
+	}
+
+	return conn_req_check_digest(tb);
+}
 
 static int
 cwmp_connection_request(struct ubus_context *ctx, struct ubus_object *obj,
 			struct ubus_request_data *req, const char *method,
 			struct blob_attr *msg)
 {
-	cwmp_flag_event("6 CONNECTION REQUEST", NULL);
+	struct blob_attr *tb[__CONN_REQ_MAX];
+	bool ok;
+
+	blob_buf_init(&b, 0);
+
+	blobmsg_parse(conn_req_policy, __CONN_REQ_MAX, tb, blob_data(msg), blob_len(msg));
+
+	ok = conn_req_validate(tb);
+	conn_req_challenge();
+	blobmsg_add_u8(&b, "ok", ok);
+
+	if (ok)
+		cwmp_flag_event("6 CONNECTION REQUEST", NULL);
+
+	ubus_send_reply(ctx, req, b.head);
+
 	return 0;
 }
 
