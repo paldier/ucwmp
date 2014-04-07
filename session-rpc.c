@@ -508,6 +508,7 @@ int cwmp_session_init(struct rpc_data *data)
 void cwmp_session_continue(struct rpc_data *data)
 {
 	if (data->empty_message) {
+		cwmp_notify_completed();
 		uloop_end();
 		return;
 	}

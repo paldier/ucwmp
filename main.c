@@ -28,6 +28,7 @@ static const char *devinfo_path = CWMP_INFO_FILE;
 static const char *config_path = CWMP_CONFIG_DIR;
 static const char *events_file = CWMP_EVENT_FILE;
 
+bool session_success = false;
 static bool session_pending;
 static int debug_level;
 
@@ -107,6 +108,7 @@ static void cwmp_run_session(void)
 	int pid;
 
 	session_pending = false;
+	session_success = false;
 
 	pid = fork();
 	if (pid < 0) {
@@ -126,10 +128,11 @@ static void cwmp_run_session(void)
 
 static void session_cb(struct uloop_process *c, int ret)
 {
-	if (session_pending) {
+	if (debug_level)
+		fprintf(stderr, "Session completed (success: %d)\n", session_success);
+
+	if (session_pending)
 		cwmp_run_session();
-		return;
-	}
 }
 
 static void cwmp_schedule_session(void)

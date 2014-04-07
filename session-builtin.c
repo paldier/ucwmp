@@ -216,3 +216,9 @@ static void __constructor server_init(void)
 	cwmp_object_add(&server_object, "ManagementServer", NULL);
 	cwmp_object_add(&devinfo_object, "DeviceInfo", NULL);
 }
+
+void cwmp_notify_completed(void)
+{
+	blob_buf_init(&b, 0);
+	ubus_invoke(ubus_ctx, cwmp_id, "session_completed", b.head, NULL, NULL, 0);
+}

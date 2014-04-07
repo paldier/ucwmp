@@ -43,6 +43,7 @@ struct cwmp_config {
 };
 
 extern struct cwmp_config config;
+extern bool session_success;
 
 char *cwmp_state_get_events(bool move_pending);
 void cwmp_flag_event(const char *id, const char *command_key);

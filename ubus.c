@@ -130,13 +130,24 @@ cwmp_server_info_set(struct ubus_context *ctx, struct ubus_object *obj,
 	return 0;
 }
 
-static struct ubus_method cwmp_methods[] = {
-	UBUS_METHOD_NOARG("server_info_get", cwmp_server_info_get ),
-	UBUS_METHOD("server_info_set", cwmp_server_info_set, info_policy ),
+static int
+cwmp_session_completed(struct ubus_context *ctx, struct ubus_object *obj,
+		       struct ubus_request_data *req, const char *method,
+		       struct blob_attr *msg)
+{
+	session_success = true;
+	return 0;
+}
 
-	UBUS_METHOD_NOARG("connection_request", cwmp_connection_request ),
+static struct ubus_method cwmp_methods[] = {
+	UBUS_METHOD_NOARG("server_info_get", cwmp_server_info_get),
+	UBUS_METHOD("server_info_set", cwmp_server_info_set, info_policy),
+
+	UBUS_METHOD_NOARG("connection_request", cwmp_connection_request),
 	UBUS_METHOD_NOARG("event_sent", cwmp_event_sent),
-	UBUS_METHOD("event_add", cwmp_event_add, event_policy ),
+	UBUS_METHOD("event_add", cwmp_event_add, event_policy),
+
+	UBUS_METHOD_NOARG("session_completed", cwmp_session_completed),
 };
 
 static struct ubus_object_type cwmp_object_type =
