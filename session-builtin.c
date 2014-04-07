@@ -10,6 +10,7 @@
 static struct ubus_context *ubus_ctx;
 static uint32_t cwmp_id;
 static struct blob_buf b;
+static int conn_req_port;
 
 enum {
 	MGMT_ATTR_URL,
@@ -17,6 +18,7 @@ enum {
 	MGMT_ATTR_PASSWORD,
 	MGMT_ATTR_PERIODIC_ENABLED,
 	MGMT_ATTR_PERIODIC_INTERVAL,
+	MGMT_ATTR_CONNECTION_REQUEST_URL,
 	__MGMT_ATTR_MAX,
 };
 
@@ -27,6 +29,7 @@ static const char * const server_params[__MGMT_ATTR_MAX] = {
 	[MGMT_ATTR_PASSWORD] = "Password",
 	[MGMT_ATTR_PERIODIC_ENABLED] = "PeriodicInformEnable",
 	[MGMT_ATTR_PERIODIC_INTERVAL] = "PeriodicInformInterval",
+	[MGMT_ATTR_CONNECTION_REQUEST_URL] = "ConncetionRequestURL",
 };
 
 static const char * const server_types[__MGMT_ATTR_MAX] = {
@@ -35,6 +38,7 @@ static const char * const server_types[__MGMT_ATTR_MAX] = {
 	[MGMT_ATTR_PASSWORD] = "string",
 	[MGMT_ATTR_PERIODIC_ENABLED] = "boolean",
 	[MGMT_ATTR_PERIODIC_INTERVAL] = "unsignedInt",
+	[MGMT_ATTR_CONNECTION_REQUEST_URL] = "string",
 };
 
 static const struct blobmsg_policy server_policy[__MGMT_ATTR_MAX] = {
@@ -47,10 +51,16 @@ static const struct blobmsg_policy server_policy[__MGMT_ATTR_MAX] = {
 
 static void server_receive_values(struct ubus_request *req, int type, struct blob_attr *msg)
 {
+	static const struct blobmsg_policy port_policy = {
+		.name = "connection_port", .type = BLOBMSG_TYPE_INT32,
+	};
 	struct blob_attr *tb[__MGMT_ATTR_MAX];
+	struct blob_attr *tb_port;
 	int i;
 
 	blobmsg_parse(server_policy, ARRAY_SIZE(server_policy), tb, blob_data(msg), blob_len(msg));
+	blobmsg_parse(&port_policy, 1, &tb_port, blob_data(msg), blob_len(msg));
+
 	for (i = 0; i < __MGMT_ATTR_MAX; i++) {
 		free(server_values[i]);
 		server_values[i] = NULL;
@@ -72,6 +82,10 @@ static void server_receive_values(struct ubus_request *req, int type, struct blo
 			break;
 		}
 	}
+
+	if (tb_port)
+		conn_req_port = blobmsg_get_u32(tb_port);
+
 }
 
 static void server_load_values(void)
@@ -112,7 +126,9 @@ static int server_commit(struct cwmp_object *obj)
 	return 0;
 }
 
-static unsigned long server_writable = (1 << ARRAY_SIZE(server_params)) - 1;
+static unsigned long server_writable =
+	((1 << ARRAY_SIZE(server_params)) - 1) &
+	~(1 << MGMT_ATTR_CONNECTION_REQUEST_URL);
 
 static struct cwmp_object server_object = {
 	.params = server_params,
@@ -159,6 +175,16 @@ static struct cwmp_object devinfo_object = {
 	.values = devinfo_values,
 	.n_params = __DEVINFO_MAX,
 };
+
+void server_update_local_addr(const char *addr)
+{
+	char **var = &server_values[MGMT_ATTR_CONNECTION_REQUEST_URL];
+
+	free(*var);
+	*var = NULL;
+
+	asprintf(var, "http://%s:%d/connreq", addr, conn_req_port);
+}
 
 void server_load_info(const char *filename)
 {

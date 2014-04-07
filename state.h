@@ -1,6 +1,8 @@
 #ifndef __UCWMP_STATE_H
 #define __UCWMP_STATE_H
 
+#define DEFAULT_CONNECTION_PORT	8080
+
 enum cwmp_event_single {
 	EVENT_BOOTSTRAP,
 	EVENT_BOOT,
@@ -27,6 +29,7 @@ enum {
 	SERVER_INFO_PASSWORD,
 	SERVER_INFO_PERIODIC_INTERVAL,
 	SERVER_INFO_PERIODIC_ENABLED,
+	SERVER_INFO_CONN_REQ_PORT,
 	__SERVER_INFO_MAX
 };
 
@@ -38,6 +41,7 @@ enum cwmp_config_change {
 struct cwmp_config {
 	const char *acs_info[3];
 
+	int conn_req_port;
 	int periodic_interval;
 	bool periodic_enabled;
 };

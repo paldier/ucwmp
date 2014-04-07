@@ -72,6 +72,8 @@ cwmp_server_info_get(struct ubus_context *ctx, struct ubus_object *obj,
 
 	blobmsg_add_u8(&b, "periodic_enabled", config.periodic_enabled);
 	blobmsg_add_u32(&b, "periodic_interval", config.periodic_interval);
+	blobmsg_add_u32(&b, "connection_port", config.conn_req_port);
+
 	ubus_send_reply(ctx, req, b.head);
 
 	return 0;

@@ -41,6 +41,7 @@ static const struct uci_parse_option server_opts[__SERVER_INFO_MAX] = {
 
 	[SERVER_INFO_PERIODIC_INTERVAL] = { "periodic_interval", UCI_TYPE_STRING },
 	[SERVER_INFO_PERIODIC_ENABLED] = { "periodic_enabled", UCI_TYPE_STRING },
+	[SERVER_INFO_CONN_REQ_PORT] = { "connection_port", UCI_TYPE_STRING },
 };
 
 static void __cwmp_save_events(struct uloop_timeout *timeout)
@@ -191,6 +192,7 @@ static int cwmp_load_config(void)
 	int i;
 
 	memset(&config, 0, sizeof(config));
+	config.conn_req_port = DEFAULT_CONNECTION_PORT;
 
 	if (cwmp_get_config_section(&ptr))
 		return -1;
@@ -212,6 +214,9 @@ static int cwmp_load_config(void)
 
 	if ((cur = tb[SERVER_INFO_PERIODIC_ENABLED]))
 		config.periodic_enabled = atoi(cur->v.string);
+
+	if ((cur = tb[SERVER_INFO_CONN_REQ_PORT]))
+		config.conn_req_port = atoi(cur->v.string);
 
 	return 0;
 }

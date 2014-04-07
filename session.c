@@ -179,6 +179,7 @@ static void cwmp_data_read(struct uclient *cl)
 
 static void cwmp_data_eof(struct uclient *cl)
 {
+	char local_addr[INET6_ADDRSTRLEN];
 	static int retries;
 	char *msg = buf;
 
@@ -194,6 +195,8 @@ static void cwmp_data_eof(struct uclient *cl)
 	case 204:
 		msg = NULL;
 	case 200:
+		uclient_get_addr(local_addr, NULL, &cl->local_addr);
+		server_update_local_addr(local_addr);
 		cwmp_process_cookies(cl);
 		cwmp_free_request();
 		cwmp_dump_message("Received ACS data", buf);
