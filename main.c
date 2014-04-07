@@ -42,6 +42,9 @@ static const struct uci_parse_option server_opts[__SERVER_INFO_MAX] = {
 	[SERVER_INFO_PERIODIC_INTERVAL] = { "periodic_interval", UCI_TYPE_STRING },
 	[SERVER_INFO_PERIODIC_ENABLED] = { "periodic_enabled", UCI_TYPE_STRING },
 	[SERVER_INFO_CONN_REQ_PORT] = { "connection_port", UCI_TYPE_STRING },
+
+	[SERVER_INFO_LOCAL_USERNAME] = { "local_username", UCI_TYPE_STRING },
+	[SERVER_INFO_LOCAL_PASSWORD] = { "local_password", UCI_TYPE_STRING },
 };
 
 static void __cwmp_save_events(struct uloop_timeout *timeout)
@@ -218,6 +221,12 @@ static int cwmp_load_config(void)
 	if ((cur = tb[SERVER_INFO_CONN_REQ_PORT]))
 		config.conn_req_port = atoi(cur->v.string);
 
+	if ((cur = tb[SERVER_INFO_LOCAL_USERNAME]))
+		config.local_username = cur->v.string;
+
+	if ((cur = tb[SERVER_INFO_LOCAL_PASSWORD]))
+		config.local_password = cur->v.string;
+
 	return 0;
 }
 
@@ -262,14 +271,25 @@ int cwmp_update_config(enum cwmp_config_change changed)
 		cwmp_set_int_option(&ptr, "periodic_enabled", config.periodic_enabled);
 		cwmp_update_session_timer();
 		break;
+
+	case CONFIG_CHANGE_LOCAL_INFO:
+		cwmp_set_string_option(&ptr, "local_username", config.local_username);
+		cwmp_set_string_option(&ptr, "local_password", config.local_password);
+		break;
 	}
 
-	uci_commit(uci_ctx, &ptr.p, false);
-
-	if (cwmp_load_config())
-		return -1;
-
 	return 0;
+}
+
+void cwmp_commit_config(void)
+{
+	struct uci_ptr ptr = {};
+
+	if (cwmp_get_config_section(&ptr))
+		return;
+
+	uci_commit(uci_ctx, &ptr.p, false);
+	cwmp_load_config();
 }
 
 static int usage(const char *prog)

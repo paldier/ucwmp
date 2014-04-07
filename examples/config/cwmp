@@ -4,3 +4,6 @@ config cwmp 'foo'
 	option periodic_enabled '1'
 	option periodic_interval '1800'
 	option connection_port '8080'
+	option local_username '_user'
+	option local_password '_password'
+

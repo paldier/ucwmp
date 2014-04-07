@@ -54,6 +54,8 @@ static const struct blobmsg_policy info_policy[__SERVER_INFO_MAX] = {
 	[SERVER_INFO_PASSWORD] = { .name = "password", .type = BLOBMSG_TYPE_STRING },
 	[SERVER_INFO_PERIODIC_INTERVAL] = { .name = "periodic_interval", .type = BLOBMSG_TYPE_INT32 },
 	[SERVER_INFO_PERIODIC_ENABLED] = { .name = "periodic_enabled", .type = BLOBMSG_TYPE_BOOL },
+	[SERVER_INFO_LOCAL_USERNAME] = { .name = "local_username", .type = BLOBMSG_TYPE_STRING },
+	[SERVER_INFO_LOCAL_PASSWORD] = { .name = "local_password", .type = BLOBMSG_TYPE_STRING },
 };
 
 static int
@@ -74,12 +76,15 @@ cwmp_server_info_get(struct ubus_context *ctx, struct ubus_object *obj,
 	blobmsg_add_u32(&b, "periodic_interval", config.periodic_interval);
 	blobmsg_add_u32(&b, "connection_port", config.conn_req_port);
 
+	if (config.local_username)
+		blobmsg_add_string(&b, "local_username", config.local_username);
+
 	ubus_send_reply(ctx, req, b.head);
 
 	return 0;
 }
 
-static void cwmp_server_info_set_url(struct blob_attr **tb)
+static bool cwmp_server_info_set_url(struct blob_attr **tb)
 {
 	bool changed = false;
 	int i;
@@ -98,10 +103,12 @@ static void cwmp_server_info_set_url(struct blob_attr **tb)
 
 	if (changed)
 		cwmp_update_config(CONFIG_CHANGE_ACS_INFO);
+
+	return changed;
 }
 
 
-static void cwmp_server_info_set_periodic(struct blob_attr **tb)
+static bool cwmp_server_info_set_periodic(struct blob_attr **tb)
 {
 	struct blob_attr *cur;
 
@@ -112,7 +119,28 @@ static void cwmp_server_info_set_periodic(struct blob_attr **tb)
 		config.periodic_enabled = blobmsg_get_bool(cur);
 
 	cwmp_update_config(CONFIG_CHANGE_PERIODIC_INFO);
+	return true;
 }
+
+static bool cwmp_server_info_set_local(struct blob_attr **tb)
+{
+	struct blob_attr *user, *pass;
+
+	user = tb[SERVER_INFO_LOCAL_USERNAME];
+	pass = tb[SERVER_INFO_LOCAL_PASSWORD];
+
+	if (user)
+		config.local_username = blobmsg_data(user);
+	if (pass)
+		config.local_password = blobmsg_data(pass);
+
+	if (!user && !pass)
+		return false;
+
+	cwmp_update_config(CONFIG_CHANGE_LOCAL_INFO);
+	return true;
+}
+
 
 static int
 cwmp_server_info_set(struct ubus_context *ctx, struct ubus_object *obj,
@@ -120,14 +148,20 @@ cwmp_server_info_set(struct ubus_context *ctx, struct ubus_object *obj,
 		     struct blob_attr *msg)
 {
 	struct blob_attr *tb[__SERVER_INFO_MAX];
+	bool changed = false;
 
 	blobmsg_parse(info_policy, __SERVER_INFO_MAX, tb, blob_data(msg), blob_len(msg));
 
 	if (tb[SERVER_INFO_URL])
-		cwmp_server_info_set_url(tb);
+		changed |= cwmp_server_info_set_url(tb);
 
 	if (tb[SERVER_INFO_PERIODIC_INTERVAL] || tb[SERVER_INFO_PERIODIC_ENABLED])
-		cwmp_server_info_set_periodic(tb);
+		changed |= cwmp_server_info_set_periodic(tb);
+
+	changed |= cwmp_server_info_set_local(tb);
+
+	if (changed)
+		cwmp_commit_config();
 
 	return 0;
 }

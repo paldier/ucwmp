@@ -19,6 +19,8 @@ enum {
 	MGMT_ATTR_PERIODIC_ENABLED,
 	MGMT_ATTR_PERIODIC_INTERVAL,
 	MGMT_ATTR_CONNECTION_REQUEST_URL,
+	MGMT_ATTR_CONNECTION_REQUEST_USERNAME,
+	MGMT_ATTR_CONNECTION_REQUEST_PASSWORD,
 	__MGMT_ATTR_MAX,
 };
 
@@ -29,7 +31,9 @@ static const char * const server_params[__MGMT_ATTR_MAX] = {
 	[MGMT_ATTR_PASSWORD] = "Password",
 	[MGMT_ATTR_PERIODIC_ENABLED] = "PeriodicInformEnable",
 	[MGMT_ATTR_PERIODIC_INTERVAL] = "PeriodicInformInterval",
-	[MGMT_ATTR_CONNECTION_REQUEST_URL] = "ConncetionRequestURL",
+	[MGMT_ATTR_CONNECTION_REQUEST_URL] = "ConnectionRequestURL",
+	[MGMT_ATTR_CONNECTION_REQUEST_USERNAME] = "ConnectionRequestUsername",
+	[MGMT_ATTR_CONNECTION_REQUEST_PASSWORD] = "ConnectionRequestPassword",
 };
 
 static const char * const server_types[__MGMT_ATTR_MAX] = {
@@ -39,6 +43,8 @@ static const char * const server_types[__MGMT_ATTR_MAX] = {
 	[MGMT_ATTR_PERIODIC_ENABLED] = "boolean",
 	[MGMT_ATTR_PERIODIC_INTERVAL] = "unsignedInt",
 	[MGMT_ATTR_CONNECTION_REQUEST_URL] = "string",
+	[MGMT_ATTR_CONNECTION_REQUEST_USERNAME] = "string",
+	[MGMT_ATTR_CONNECTION_REQUEST_PASSWORD] = "string",
 };
 
 static const struct blobmsg_policy server_policy[__MGMT_ATTR_MAX] = {
@@ -47,6 +53,8 @@ static const struct blobmsg_policy server_policy[__MGMT_ATTR_MAX] = {
 	[MGMT_ATTR_PASSWORD] = { .name = "password", .type = BLOBMSG_TYPE_STRING },
 	[MGMT_ATTR_PERIODIC_ENABLED] = { .name = "periodic_enabled", .type = BLOBMSG_TYPE_INT8 },
 	[MGMT_ATTR_PERIODIC_INTERVAL] = { .name = "periodic_interval", .type = BLOBMSG_TYPE_INT32 },
+	[MGMT_ATTR_CONNECTION_REQUEST_USERNAME] = { .name = "local_username", .type = BLOBMSG_TYPE_STRING },
+	[MGMT_ATTR_CONNECTION_REQUEST_PASSWORD] = { .name = "local_password", .type = BLOBMSG_TYPE_STRING },
 };
 
 static void server_receive_values(struct ubus_request *req, int type, struct blob_attr *msg)
@@ -129,7 +137,10 @@ static int server_commit(struct cwmp_object *obj)
 static unsigned long server_writable =
 	((1 << ARRAY_SIZE(server_params)) - 1) &
 	~(1 << MGMT_ATTR_CONNECTION_REQUEST_URL);
-static unsigned long server_write_only = (1 << MGMT_ATTR_PASSWORD);
+
+static unsigned long server_write_only =
+	(1 << MGMT_ATTR_PASSWORD) |
+	(1 << MGMT_ATTR_CONNECTION_REQUEST_PASSWORD);
 
 static struct cwmp_object server_object = {
 	.params = server_params,
