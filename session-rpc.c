@@ -206,6 +206,9 @@ static int cwmp_handle_get_parameter_names(struct rpc_data *data)
 	if (!__soap_get_field(node, "ParameterPath", it.path, sizeof(it.path)))
 		return CWMP_ERROR_INVALID_ARGUMENTS;
 
+	if (!strlen(it.path))
+		snprintf(it.path, sizeof(it.path), "%s.", cwmp_object_name(&root_object));
+
 	node = roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:GetParameterNamesResponse", NULL);
 
 	it.node = cwmp_open_array(node, "ParameterList");
