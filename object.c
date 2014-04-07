@@ -273,9 +273,12 @@ int cwmp_path_iterate(struct path_iterate *it, bool next)
 {
 	struct cwmp_object *obj;
 	const char *param;
+	bool empty;
 	int idx;
+	int n;
 
-	if (!strlen(it->path))
+	empty = !strlen(it->path);
+	if (empty)
 		snprintf(it->path, sizeof(it->path), "%s.", cwmp_object_name(&root_object));
 
 	obj = cwmp_object_get(NULL, it->path, &param);
@@ -289,8 +292,13 @@ int cwmp_path_iterate(struct path_iterate *it, bool next)
 		return 0;
 	}
 
-	if (!*param)
-		return __cwmp_path_iterate(it, obj, param - it->path, next);
+	if (!*param) {
+		n = it->cb(it, obj, -1);
+		if (!empty || !next)
+			n += __cwmp_path_iterate(it, obj, param - it->path, next);
+
+		return n;
+	}
 
 	idx = cwmp_object_get_param_idx(obj, param);
 	if (idx < 0) {
