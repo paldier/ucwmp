@@ -49,14 +49,9 @@ static int cwmp_add_obj_parameter_value(struct path_iterate *it, struct cwmp_obj
 	if (i < 0)
 		return 0;
 
-	if (!obj->get_param)
-		return 0;
-
-	if (obj->get_param(obj, i, &value))
-		return 0;
-
+	value = cwmp_object_get_param(obj, i);
 	if (!value)
-		value = "";
+		return 0;
 
 	if (obj->param_types)
 		type = obj->param_types[i];

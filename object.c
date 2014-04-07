@@ -167,6 +167,14 @@ bool cwmp_object_param_writable(struct cwmp_object *obj, int param)
 	return bitfield_test(obj->writable, param);
 }
 
+static bool cwmp_object_param_write_only(struct cwmp_object *obj, int param)
+{
+	if (!obj->write_only)
+		return false;
+
+	return bitfield_test(obj->write_only, param);
+}
+
 int cwmp_param_set(const char *name, const char *value)
 {
 	struct cwmp_object *obj;
@@ -201,17 +209,33 @@ int cwmp_param_set(const char *name, const char *value)
 	return obj->set_param(obj, i, value);
 }
 
+const char *cwmp_object_get_param(struct cwmp_object *obj, int i)
+{
+	const char *value;
+
+	if (!obj->get_param)
+		return NULL;
+
+	if (cwmp_object_param_write_only(obj, i))
+		return "";
+
+	if (obj->get_param(obj, i, &value))
+		return NULL;
+
+	if (!value)
+		value = "";
+
+	return value;
+}
+
 const char *cwmp_param_get(const char *name, const char **type)
 {
 	struct cwmp_object *obj;
-	const char *value, *param_str;
+	const char *param_str;
 	int i;
 
 	obj = cwmp_object_get(NULL, name, &param_str);
 	if (!obj)
-		return NULL;
-
-	if (!obj->get_param)
 		return NULL;
 
 	i = cwmp_object_get_param_idx(obj, param_str);
@@ -221,10 +245,7 @@ const char *cwmp_param_get(const char *name, const char **type)
 	if (type)
 		*type = obj->param_types ? obj->param_types[i] : NULL;
 
-	if (obj->get_param(obj, i, &value))
-		return NULL;
-
-	return value;
+	return cwmp_object_get_param(obj, i);
 }
 
 static int fill_path(struct path_iterate *it, int ofs, const char *name)

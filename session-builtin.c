@@ -129,6 +129,7 @@ static int server_commit(struct cwmp_object *obj)
 static unsigned long server_writable =
 	((1 << ARRAY_SIZE(server_params)) - 1) &
 	~(1 << MGMT_ATTR_CONNECTION_REQUEST_URL);
+static unsigned long server_write_only = (1 << MGMT_ATTR_PASSWORD);
 
 static struct cwmp_object server_object = {
 	.params = server_params,
@@ -136,6 +137,7 @@ static struct cwmp_object server_object = {
 	.values = server_values,
 	.n_params = ARRAY_SIZE(server_params),
 	.writable = &server_writable,
+	.write_only = &server_write_only,
 	.commit = server_commit,
 };
 
