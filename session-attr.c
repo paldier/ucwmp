@@ -23,11 +23,11 @@ static bool cwmp_attr_is_default(struct param_attr *attr)
 	return true;
 }
 
-struct param_attr *cwmp_attr_cache_get(const char *name)
+struct param_attr *cwmp_attr_cache_get(const char *name, bool temp)
 {
+	static struct param_attr temp_attr;
 	struct param_attr *attr;
 	const char *value, *type;
-	char *name_buf;
 
 	attr = avl_find_element(&attr_cache, name, attr, node);
 	if (attr)
@@ -37,13 +37,26 @@ struct param_attr *cwmp_attr_cache_get(const char *name)
 	if (!value)
 		return NULL;
 
-	attr = calloc_a(sizeof(*attr) + strlen(value) + 1,
-			&name_buf, strlen(name) + 1);
+	if (temp) {
+		memset(&temp_attr, 0, sizeof(temp_attr));
+		attr = &temp_attr;
+	} else {
+		char *name_buf, *value_buf;
+
+		attr = calloc_a(sizeof(*attr) + strlen(value) + 1,
+				&name_buf, strlen(name) + 1,
+				&value_buf, strlen(value) + 1);
+		name = strcpy(name_buf, name);
+		value = strcpy(value_buf, value);
+	}
+
+	attr->node.key = name;
+	attr->value = value;
 	attr->type = type;
-	strcpy(attr->value, value);
-	attr->node.key = strcpy(name_buf, name);
 	attr->acl_subscriber = true;
-	avl_insert(&attr_cache, &attr->node);
+
+	if (!temp)
+		avl_insert(&attr_cache, &attr->node);
 
 	return attr;
 }
@@ -71,7 +84,7 @@ static bool cwmp_attr_cache_parse(struct blob_attr *data)
 	if (!tb[ATTR_CACHE_NAME] || !tb[ATTR_CACHE_VALUE])
 		return false;
 
-	attr = cwmp_attr_cache_get(blobmsg_data(tb[ATTR_CACHE_NAME]));
+	attr = cwmp_attr_cache_get(blobmsg_data(tb[ATTR_CACHE_NAME]), false);
 	if (!attr)
 		return false;
 

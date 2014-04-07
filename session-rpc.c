@@ -223,9 +223,62 @@ static int cwmp_handle_get_parameter_names(struct rpc_data *data)
 	return 0;
 }
 
+static int cwmp_add_object_attr(struct path_iterate *it, struct cwmp_object *obj, int idx)
+{
+	struct param_attr *attr;
+	node_t *node;
+	char data[4];
+
+	if (idx < 0)
+		return 0;
+
+	attr = cwmp_attr_cache_get(it->path, true);
+	if (!attr)
+		return 0;
+
+	node = roxml_add_node(it->node, 0, ROXML_ELM_NODE, "ParameterAttributeStruct", NULL);
+	roxml_add_node(node, 0, ROXML_ELM_NODE, "Name", it->path);
+
+	snprintf(data, sizeof(data), "%d", attr->notification);
+	roxml_add_node(node, 0, ROXML_ELM_NODE, "Notification", data);
+
+	node = cwmp_open_array(node, "AccessList");
+	if (attr->acl_subscriber)
+		roxml_add_node(it->node, 0, ROXML_ELM_NODE, "string", "Subscriber");
+	cwmp_close_array(node, attr->acl_subscriber, "string");
+
+	return 1;
+}
+
 static int cwmp_handle_get_parameter_attributes(struct rpc_data *data)
 {
-	return CWMP_ERROR_REQUEST_DENIED;
+	struct path_iterate it = {
+		.cb = cwmp_add_object_attr
+	};
+	node_t *cur;
+	char *str;
+	int ret = 0;
+	int n = 0;
+
+	cur = soap_array_start(data->in, "ParameterNames", NULL);
+	if (!cur)
+		return CWMP_ERROR_INVALID_PARAM;
+
+	it.node = cwmp_open_array(data->out, "ParameterList");
+
+	while (soap_array_iterate_contents(&cur, "string", &str)) {
+		bool partial;
+		int len;
+
+		len = snprintf(it.path, sizeof(it.path), "%s", str);
+		partial = str[len - 1] == '.';
+
+		n += cwmp_path_iterate(&it, partial);
+	}
+
+	cwmp_close_array(it.node, n, "cwmp:ParameterAttributeStruct");
+
+	return ret;
 }
 
 static int cwmp_set_param_attr(node_t *node)
@@ -237,7 +290,7 @@ static int cwmp_set_param_attr(node_t *node)
 	if (!__soap_get_field(node, "Name", buf, sizeof(buf)))
 		return CWMP_ERROR_INVALID_PARAM;
 
-	attr = cwmp_attr_cache_get(buf);
+	attr = cwmp_attr_cache_get(buf, true);
 	if (!attr)
 		return CWMP_ERROR_INVALID_PARAM;
 
