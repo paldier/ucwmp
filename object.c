@@ -275,6 +275,9 @@ int cwmp_path_iterate(struct path_iterate *it, bool next)
 	const char *param;
 	int idx;
 
+	if (!strlen(it->path))
+		snprintf(it->path, sizeof(it->path), "%s.", cwmp_object_name(&root_object));
+
 	obj = cwmp_object_get(NULL, it->path, &param);
 	if (!obj) {
 		it->error = CWMP_ERROR_INVALID_PARAM;
