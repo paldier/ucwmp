@@ -17,7 +17,7 @@ IF(DUMMY_MODE)
   ADD_DEFINITIONS(-DDUMMY_MODE=1)
 ENDIF()
 
-ADD_EXECUTABLE(session session.c session-rpc.c session-soap.c session-attr.c session-builtin.c object.c)
+ADD_EXECUTABLE(session session.c session-rpc.c session-soap.c session-attr.c session-builtin.c session-object.c)
 ADD_EXECUTABLE(cwmpd main.c state.c ubus.c)
 ADD_EXECUTABLE(connreq connreq.c)
 

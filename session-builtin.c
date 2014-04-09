@@ -17,7 +17,7 @@
 
 #include "session-soap.h"
 #include "session-rpc.h"
-#include "object.h"
+#include "session-object.h"
 #include "util.h"
 
 static struct ubus_context *ubus_ctx;

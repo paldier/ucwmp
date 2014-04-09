@@ -15,7 +15,7 @@
 #include <stdlib.h>
 
 #include "session-rpc.h"
-#include "object.h"
+#include "session-object.h"
 
 static int cwmp_dot_len(const char *str)
 {

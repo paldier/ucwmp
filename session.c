@@ -23,7 +23,7 @@
 #include "session-soap.h"
 #include "session-rpc.h"
 #include "session-attr.h"
-#include "object.h"
+#include "session-object.h"
 
 bool session_init = true;
 

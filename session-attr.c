@@ -18,7 +18,7 @@
 
 #include "session-rpc.h"
 #include "session-attr.h"
-#include "object.h"
+#include "session-object.h"
 
 char *attr_cache_file = NULL;
 

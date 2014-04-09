@@ -22,7 +22,7 @@
 #include "session-soap.h"
 #include "session-rpc.h"
 #include "session-attr.h"
-#include "object.h"
+#include "session-object.h"
 
 struct blob_buf events;
 
