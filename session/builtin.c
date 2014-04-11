@@ -15,10 +15,10 @@
 #include <libubox/blobmsg_json.h>
 #include <libubus.h>
 
-#include "session-soap.h"
-#include "session-rpc.h"
-#include "session-object.h"
-#include "util.h"
+#include "soap.h"
+#include "rpc.h"
+#include "object.h"
+#include "../util.h"
 
 static struct ubus_context *ubus_ctx;
 static uint32_t cwmp_id;

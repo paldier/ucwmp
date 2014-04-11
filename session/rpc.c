@@ -19,10 +19,10 @@
 #include <libubox/blobmsg.h>
 #include <libubox/blobmsg_json.h>
 
-#include "session-soap.h"
-#include "session-rpc.h"
-#include "session-attr.h"
-#include "session-object.h"
+#include "soap.h"
+#include "rpc.h"
+#include "attr.h"
+#include "object.h"
 
 struct blob_buf events;
 

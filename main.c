@@ -25,11 +25,11 @@
 #ifdef DUMMY_MODE
 #define CWMP_CONFIG_DIR	"./examples/config"
 #define CWMP_INFO_DIR "./examples"
-#define CWMP_SESSION_BIN "./session"
+#define CWMP_SESSION_BIN "./cwmp-session"
 #else
 #define CWMP_CONFIG_DIR	NULL /* UCI default */
 #define CWMP_INFO_DIR "/etc/cwmp"
-#define CWMP_SESSION_BIN "session"
+#define CWMP_SESSION_BIN "cwmp-session"
 #endif
 
 #define CWMP_INFO_FILE	CWMP_INFO_DIR "/cwmp-device.json"

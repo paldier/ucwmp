@@ -16,9 +16,9 @@
 #include <libubox/blobmsg.h>
 #include <libubox/blobmsg_json.h>
 
-#include "session-rpc.h"
-#include "session-attr.h"
-#include "session-object.h"
+#include "rpc.h"
+#include "attr.h"
+#include "object.h"
 
 char *attr_cache_file = NULL;
 

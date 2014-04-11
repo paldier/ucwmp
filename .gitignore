@@ -6,6 +6,6 @@ CMakeFiles
 *.so
 *.dylib
 install_manifest.txt
-session
-cwmpd
+/cwmp-session
+/cwmpd
 connreq
