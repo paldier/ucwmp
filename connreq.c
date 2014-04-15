@@ -207,8 +207,8 @@ static void cwmpd_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 
 	printf("Status: %s\n", status);
 	printf("WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", nonce=\"%s\"\n\n",
-		blobmsg_data(tb[REQ_REALM]),
-		blobmsg_data(tb[REQ_NONCE]));
+		(char *) blobmsg_data(tb[REQ_REALM]),
+		(char *) blobmsg_data(tb[REQ_NONCE]));
 }
 
 static void http_validate(struct ubus_context *ctx)
