@@ -73,7 +73,7 @@ static int digest_find_idx(const char *str)
 	return -1;
 }
 
-char *digest_unquote_sep(char **str)
+static char *digest_unquote_sep(char **str)
 {
 	char *cur = *str + 1;
 	char *start = cur;
