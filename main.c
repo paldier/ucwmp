@@ -15,6 +15,7 @@
 #include <getopt.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <uci.h>
 
 #include <libubox/utils.h>
