@@ -11,6 +11,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+#define _GNU_SOURCE
+
 #include <libubox/utils.h>
 #include <libubox/blobmsg_json.h>
 #include <libubus.h>
