@@ -17,10 +17,7 @@ IF(DUMMY_MODE)
   ADD_DEFINITIONS(-DDUMMY_MODE=1)
 ENDIF()
 
-ADD_EXECUTABLE(backend-test test.c)
 ADD_LIBRARY(mgmt_backend STATIC parse.c)
 
 find_library(json NAMES json-c json)
 TARGET_LINK_LIBRARIES(mgmt_backend ubus ubox blobmsg_json ${json})
-TARGET_LINK_LIBRARIES(backend-test mgmt_backend)
-TARGET_LINK_LIBRARIES(backend-test mgmt_backend)
