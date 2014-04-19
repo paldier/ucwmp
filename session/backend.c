@@ -1,4 +1,4 @@
-#include <mgmt_backend.h>
+#include <mgmt_backend/client.h>
 
 #include "soap.h"
 #include "object.h"

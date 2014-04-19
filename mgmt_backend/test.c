@@ -15,7 +15,7 @@
 
 #include <libubox/blobmsg_json.h>
 
-#include "mgmt_backend.h"
+#include "client.h"
 
 static void dump_params(struct mgmt_object *obj)
 {

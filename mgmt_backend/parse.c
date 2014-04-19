@@ -20,7 +20,7 @@
 #include <libubox/utils.h>
 #include <libubox/avl-cmp.h>
 
-#include "mgmt_backend.h"
+#include "client.h"
 
 static struct blob_buf obj_buf, b;
 

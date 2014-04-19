@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.6)
 INCLUDE(CheckIncludeFiles)
 
 PROJECT(ucwmp C)
-ADD_DEFINITIONS(-Os -Wall -Werror --std=gnu99 -g3 -Wmissing-declarations -I${CMAKE_SOURCE_DIR}/mgmt_backend)
+ADD_DEFINITIONS(-Os -Wall -Werror --std=gnu99 -g3 -Wmissing-declarations -I${CMAKE_SOURCE_DIR})
 
 SET(CMAKE_SHARED_LIBRARY_LINK_C_FLAGS "")
 
