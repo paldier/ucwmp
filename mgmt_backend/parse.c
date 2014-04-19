@@ -141,7 +141,12 @@ mgmt_object_param_add(struct mgmt_backend_api *ctx, struct mgmt_object *obj, str
 	par->type = strcpy(type_buf, type);
 	par->backend_data = memcpy(bdata, backend_data, blob_pad_len(backend_data));
 
-	avl_insert(&obj->params, &par->avl);
+	if (avl_insert(&obj->params, &par->avl)) {
+		free(par);
+		return;
+	}
+
+	obj->n_params++;
 }
 
 static void

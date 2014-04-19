@@ -32,6 +32,7 @@ struct mgmt_object {
 	struct avl_node avl;
 
 	struct avl_tree params;
+	int n_params;
 };
 
 struct mgmt_backend_api {
