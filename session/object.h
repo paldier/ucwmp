@@ -17,6 +17,8 @@
 #include <libubox/avl.h>
 #include <libubox/utils.h>
 
+#include "rpc.h"
+
 struct cwmp_object {
 	struct avl_node node;
 
