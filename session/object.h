@@ -60,6 +60,7 @@ void cwmp_commit(bool apply);
 int cwmp_object_add(struct cwmp_object *obj, const char *name, struct cwmp_object *parent);
 void cwmp_object_delete(struct cwmp_object *obj);
 struct cwmp_object *cwmp_object_get(struct cwmp_object *root, const char *path, const char **param);
+struct cwmp_object *cwmp_object_path_create(struct cwmp_object *root, const char *path, const char **param);
 const char *cwmp_object_get_param(struct cwmp_object *obj, int i);
 int cwmp_object_get_param_idx(struct cwmp_object *obj, const char *name);
 
@@ -69,5 +70,8 @@ static inline const char *cwmp_object_name(struct cwmp_object *obj)
 }
 
 bool cwmp_object_param_writable(struct cwmp_object *obj, int param);
+
+void cwmp_backend_add_objects(void);
+void cwmp_backend_load_data(const char *path);
 
 #endif

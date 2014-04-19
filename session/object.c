@@ -43,9 +43,36 @@ struct cwmp_object root_object = {
 	.objects = AVL_TREE_INIT(root_object.objects, cwmp_object_cmp, 0, NULL),
 };
 
-struct cwmp_object *cwmp_object_get(struct cwmp_object *root, const char *path, const char **param)
+static struct cwmp_object *
+cwmp_object_create_empty(struct cwmp_object *parent, const char *name)
+{
+	struct cwmp_object *obj;
+	const char *sep;
+	char *name_buf;
+	int name_len;
+
+	sep = strchr(name, '.');
+	if (sep)
+		name_len = sep - name;
+	else
+		name_len = strlen(name);
+
+	obj = calloc_a(sizeof(*obj), &name_buf, name_len + 1);
+	memcpy(name_buf, name, name_len);
+
+	if (cwmp_object_add(obj, name_buf, parent)) {
+		free(obj);
+		obj = NULL;
+	}
+
+	return obj;
+}
+
+static struct cwmp_object *
+__cwmp_object_get(struct cwmp_object *root, const char *path, const char **param, bool create)
 {
 	struct cwmp_object *obj = root;
+	struct cwmp_object *parent = root;
 	struct avl_tree *tree;
 	const char *cur = path, *next;
 
@@ -72,7 +99,11 @@ struct cwmp_object *cwmp_object_get(struct cwmp_object *root, const char *path, 
 			return NULL;
 
 		tree = &obj->objects;
+		parent = obj;
 		obj = avl_find_element(tree, cur, obj, node);
+		if (!obj && create)
+			obj = cwmp_object_create_empty(parent, cur);
+
 		if (!obj)
 			return NULL;
 
@@ -83,6 +114,16 @@ struct cwmp_object *cwmp_object_get(struct cwmp_object *root, const char *path, 
 		*param = cur;
 
 	return obj;
+}
+
+struct cwmp_object *cwmp_object_path_create(struct cwmp_object *root, const char *path, const char **param)
+{
+	return __cwmp_object_get(root, path, param, true);
+}
+
+struct cwmp_object *cwmp_object_get(struct cwmp_object *root, const char *path, const char **param)
+{
+	return __cwmp_object_get(root, path, param, false);
 }
 
 static void cwmp_commit_obj(struct cwmp_object *obj, bool apply)

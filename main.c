@@ -24,6 +24,7 @@
 #include "state.h"
 
 #ifdef DUMMY_MODE
+#define CWMP_MODEL_DIR "./model"
 #define CWMP_CONFIG_DIR	"./examples/config"
 #define CWMP_INFO_DIR "./examples"
 #define CWMP_SESSION_BIN "./cwmp-session"
@@ -31,6 +32,7 @@
 #define CWMP_CONFIG_DIR	NULL /* UCI default */
 #define CWMP_INFO_DIR "/etc/cwmp"
 #define CWMP_SESSION_BIN "cwmp-session"
+#define CWMP_MODEL_DIR CWMP_INFO_DIR "/model"
 #endif
 
 #define CWMP_INFO_FILE	CWMP_INFO_DIR "/cwmp-device.json"
@@ -96,14 +98,11 @@ static void cwmp_exec_session(const char *event_data)
 		event_data,
 		"-I",
 		devinfo_path,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
-		NULL,
+		"-m",
+		CWMP_MODEL_DIR "/*.json",
 		NULL
 	};
-	int argc = 7;
+	int argc = 9;
 
 	if (config.acs_info[1]) {
 		argv[argc++] = "-u";
@@ -115,6 +114,7 @@ static void cwmp_exec_session(const char *event_data)
 	}
 
 	argv[argc++] = config.acs_info[0];
+	argv[argc] = NULL;
 	snprintf(debug_str, sizeof(debug_str), "%d", debug_level);
 	execvp(argv[0], (char * const *) argv);
 	exit(255);
