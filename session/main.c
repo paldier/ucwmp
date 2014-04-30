@@ -192,7 +192,6 @@ static void cwmp_data_read(struct uclient *cl)
 
 static void cwmp_data_eof(struct uclient *cl)
 {
-	char local_addr[INET6_ADDRSTRLEN];
 	static int retries;
 	char *msg = buf;
 
@@ -208,8 +207,6 @@ static void cwmp_data_eof(struct uclient *cl)
 	case 204:
 		msg = NULL;
 	case 200:
-		uclient_get_addr(local_addr, NULL, &cl->local_addr);
-		server_update_local_addr(local_addr);
 		cwmp_process_cookies(cl);
 		cwmp_free_request();
 		cwmp_dump_message("Received ACS data", buf);
@@ -251,6 +248,7 @@ static void cwmp_connect(void)
 	}
 
 	uc = uclient_new(url, auth_str, &cwmp_cb);
+	uclient_connect(uc);
 }
 
 static int usage(const char *progname)
@@ -293,6 +291,7 @@ static int load_events(const char *data)
 int main(int argc, char **argv)
 {
 	const char *progname = argv[0];
+	char local_addr[INET6_ADDRSTRLEN];
 	int ch;
 
 	uloop_init();
@@ -338,6 +337,9 @@ int main(int argc, char **argv)
 	url = argv[0];
 	session_init = false;
 	cwmp_connect();
+
+	uclient_get_addr(local_addr, NULL, &uc->local_addr);
+	server_update_local_addr(local_addr);
 
 	cur_request = soap_init_session();
 	cwmp_send_request();
