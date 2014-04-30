@@ -37,6 +37,7 @@ struct cwmp_object {
 	unsigned long *write_only;
 
 	int (*commit)(struct cwmp_object *obj);
+	int (*validate)(struct cwmp_object *obj);
 	int (*fetch_objects)(struct cwmp_object *obj);
 
 	int (*get_param)(struct cwmp_object *obj, int param, const char **value);
@@ -57,7 +58,7 @@ int cwmp_path_iterate(struct path_iterate *it, bool next);
 
 int cwmp_param_set(const char *name, const char *value);
 const char *cwmp_param_get(const char *name, const char **type);
-void cwmp_commit(bool apply);
+int cwmp_commit(bool apply);
 
 int cwmp_object_add(struct cwmp_object *obj, const char *name, struct cwmp_object *parent);
 void cwmp_object_delete(struct cwmp_object *obj);

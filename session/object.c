@@ -160,9 +160,35 @@ static void __cwmp_commit(struct cwmp_object *obj, bool apply)
 		__cwmp_commit(cur, apply);
 }
 
-void cwmp_commit(bool apply)
+static int __cwmp_validate(struct cwmp_object *obj)
 {
+	struct cwmp_object *cur;
+	int ret;
+
+	avl_for_each_element(&obj->objects, cur, node) {
+		ret = __cwmp_validate(cur);
+		if (ret)
+			return ret;
+	}
+
+	if (!obj->validate)
+		return 0;
+
+	return obj->validate(obj);
+}
+
+int cwmp_commit(bool apply)
+{
+	int ret = 0;
+
+	if (apply && __cwmp_validate(&root_object)) {
+		apply = false;
+		ret = -1;
+	}
+
 	__cwmp_commit(&root_object, apply);
+
+	return ret;
 }
 
 int cwmp_object_get_param_idx(struct cwmp_object *obj, const char *name)
