@@ -17,6 +17,7 @@
 #include "object.h"
 
 static struct acs_api api;
+static bool need_validate;
 
 struct backend_param {
 	struct acs_object_param *mgmt;
@@ -58,9 +59,37 @@ static int backend_get_param(struct cwmp_object *c_obj, int param, const char **
 	return 0;
 }
 
+static int backend_set_param(struct cwmp_object *c_obj, int param, const char *value)
+{
+	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
+
+	if (acs_param_set(&api, obj->params[param].mgmt, value))
+		return CWMP_ERROR_INTERNAL_ERROR;
+
+	need_validate = true;
+	return 0;
+}
+
+static int backend_validate(struct cwmp_object *c_obj)
+{
+	if (!need_validate)
+		return 0;
+
+	need_validate = false;
+	return acs_validate(&api);
+}
+
+static int backend_commit(struct cwmp_object *c_obj)
+{
+	return acs_commit(&api);
+}
+
 static void backend_object_init(struct backend_object *obj)
 {
 	obj->cwmp.get_param = backend_get_param;
+	obj->cwmp.set_param = backend_set_param;
+	obj->cwmp.validate = backend_validate;
+	obj->cwmp.commit = backend_commit;
 }
 
 static void
