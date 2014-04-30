@@ -24,10 +24,8 @@ ADD_EXECUTABLE(cwmp-session
 ADD_EXECUTABLE(cwmpd main.c state.c ubus.c)
 ADD_EXECUTABLE(connreq connreq.c)
 
-ADD_SUBDIRECTORY(mgmt_backend)
-
 find_library(json NAMES json-c json)
-TARGET_LINK_LIBRARIES(cwmp-session ubus uclient ubox roxml blobmsg_json ${json} mgmt_backend)
+TARGET_LINK_LIBRARIES(cwmp-session ubus uclient ubox roxml blobmsg_json ${json} acs)
 TARGET_LINK_LIBRARIES(cwmpd uci uclient ubus ubox blobmsg_json ${json})
 TARGET_LINK_LIBRARIES(connreq ubus ubox)
 

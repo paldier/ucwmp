@@ -11,31 +11,31 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#include <mgmt_backend/client.h>
+#include <libacs/client.h>
 
 #include "soap.h"
 #include "object.h"
 
-static struct mgmt_backend_api api;
+static struct acs_api api;
 
 struct backend_param {
-	struct mgmt_object_param *mgmt;
+	struct acs_object_param *mgmt;
 };
 
 struct backend_object {
 	struct cwmp_object cwmp;
-	struct mgmt_object *mgmt;
+	struct acs_object *mgmt;
 	struct backend_param *params;
 };
 
 static void __constructor backend_init(void)
 {
-	mgmt_backend_api_init(&api);
+	acs_api_init(&api);
 }
 
 void cwmp_backend_load_data(const char *path)
 {
-	mgmt_backend_api_load_all(&api, path);
+	acs_api_load_module(&api, "tr-098");
 }
 
 static int backend_get_param(struct cwmp_object *obj, int param, const char **value)
@@ -51,18 +51,18 @@ static void backend_object_init(struct backend_object *obj)
 
 static void backend_add_parameters(struct backend_object *obj, const char **param_names)
 {
-	struct mgmt_object_param *par;
+	struct acs_object_param *par;
 
 	obj->cwmp.params = param_names;
 	avl_for_each_element(&obj->mgmt->params, par, avl) {
 		int idx = obj->cwmp.n_params++;
 
-		param_names[idx] = mgmt_object_param_name(par);
+		param_names[idx] = acs_object_param_name(par);
 		obj->params[idx].mgmt = par;
 	}
 }
 
-static void backend_create_object(struct mgmt_object *m_obj)
+static void backend_create_object(struct acs_object *m_obj)
 {
 	struct cwmp_object *parent;
 	struct backend_object *obj;
@@ -70,7 +70,7 @@ static void backend_create_object(struct mgmt_object *m_obj)
 	const char **param_names;
 	const char *name;
 
-	parent = cwmp_object_path_create(&root_object, mgmt_object_name(m_obj), &name);
+	parent = cwmp_object_path_create(&root_object, acs_object_name(m_obj), &name);
 	if (!parent)
 		return;
 
@@ -91,7 +91,7 @@ static void backend_create_object(struct mgmt_object *m_obj)
 
 void cwmp_backend_add_objects(void)
 {
-	struct mgmt_object *obj;
+	struct acs_object *obj;
 
 	avl_for_each_element(&api.objects, obj, avl)
 		backend_create_object(obj);
