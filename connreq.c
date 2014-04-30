@@ -203,12 +203,13 @@ static void cwmpd_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 	if (!blobmsg_get_bool(tb[REQ_OK]))
 		status = "401 Unauthorized";
 	else
-		status = "204 No Content";
+		status = "200 OK";
 
 	printf("Status: %s\n", status);
-	printf("WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", nonce=\"%s\"\n\n",
+	printf("WWW-Authenticate: Digest qop=\"auth\", realm=\"%s\", nonce=\"%s\"\n",
 		(char *) blobmsg_data(tb[REQ_REALM]),
 		(char *) blobmsg_data(tb[REQ_NONCE]));
+	printf("Content-Length: 0\n\n");
 }
 
 static void http_validate(struct ubus_context *ctx)
