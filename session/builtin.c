@@ -269,6 +269,7 @@ static void __constructor server_init(void)
 
 	cwmp_object_add(&server_object, "ManagementServer", NULL);
 	cwmp_object_add(&devinfo_object, "DeviceInfo", NULL);
+	cwmp_backend_init(ubus_ctx);
 }
 
 void cwmp_notify_completed(void)

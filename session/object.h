@@ -19,6 +19,8 @@
 
 #include "rpc.h"
 
+struct ubus_context;
+
 struct cwmp_object {
 	struct avl_node node;
 
@@ -71,6 +73,7 @@ static inline const char *cwmp_object_name(struct cwmp_object *obj)
 
 bool cwmp_object_param_writable(struct cwmp_object *obj, int param);
 
+void cwmp_backend_init(struct ubus_context *ubus_ctx);
 void cwmp_backend_add_objects(void);
 void cwmp_backend_load_data(const char *path);
 

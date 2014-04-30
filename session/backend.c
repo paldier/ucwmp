@@ -28,9 +28,10 @@ struct backend_object {
 	struct backend_param *params;
 };
 
-static void __constructor backend_init(void)
+void cwmp_backend_init(struct ubus_context *ubus_ctx)
 {
 	acs_api_init(&api);
+	acs_set_ubus_context(&api, ubus_ctx);
 }
 
 void cwmp_backend_load_data(const char *path)
@@ -38,9 +39,22 @@ void cwmp_backend_load_data(const char *path)
 	acs_api_load_module(&api, "tr-098");
 }
 
-static int backend_get_param(struct cwmp_object *obj, int param, const char **value)
+static int backend_get_param(struct cwmp_object *c_obj, int param, const char **value)
 {
-	*value = "N/A";
+	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
+	struct blobmsg_policy policy = { "value", BLOBMSG_TYPE_STRING };
+	struct blob_attr *attr;
+	struct blob_attr *val;
+
+	if (acs_param_get(&api, obj->params[param].mgmt, &attr))
+		return CWMP_ERROR_INTERNAL_ERROR;
+
+	blobmsg_parse(&policy, 1, &val, blobmsg_data(attr), blobmsg_data_len(attr));
+	if (val)
+		*value = blobmsg_data(val);
+	else
+		*value = "";
+
 	return 0;
 }
 
