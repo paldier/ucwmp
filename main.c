@@ -28,18 +28,18 @@
 
 #ifdef DUMMY_MODE
 #define CWMP_MODEL_DIR "./model"
-#define CWMP_CONFIG_DIR	"./examples/config"
-#define CWMP_INFO_DIR "./examples"
+#define CWMP_ETC_DIR "./etc"
+#define CWMP_CONFIG_DIR	CWMP_ETC_DIR "/config"
 #define CWMP_SESSION_BIN "./cwmp-session"
 #else
 #define CWMP_CONFIG_DIR	NULL /* UCI default */
-#define CWMP_INFO_DIR "/etc/cwmp"
+#define CWMP_ETC_DIR "/etc"
 #define CWMP_SESSION_BIN "cwmp-session"
-#define CWMP_MODEL_DIR CWMP_INFO_DIR "/model"
+#define CWMP_MODEL_DIR CWMP_ETC_DIR "/model"
 #endif
 
-#define CWMP_INFO_FILE	CWMP_INFO_DIR "/cwmp-device.json"
-#define CWMP_CACHE_FILE	CWMP_INFO_DIR "/cache.json"
+#define CWMP_INFO_FILE	CWMP_ETC_DIR "/cwmp-device.json"
+#define CWMP_CACHE_FILE	CWMP_ETC_DIR "/cwmp-cache.json"
 
 static struct uci_context *uci_ctx;
 static const char *session_path = CWMP_SESSION_BIN;
