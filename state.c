@@ -152,7 +152,7 @@ out:
 	cwmp_events_changed(true);
 }
 
-static void cwmp_add_events(struct blob_attr *attr)
+void cwmp_add_events(struct blob_attr *attr)
 {
 	static const struct blobmsg_policy ev_attr[2] = {
 		{ .type = BLOBMSG_TYPE_STRING },
@@ -176,20 +176,3 @@ static void cwmp_add_events(struct blob_attr *attr)
 
 }
 
-void cwmp_load_events(const char *filename)
-{
-	json_object *obj;
-
-	blob_buf_init(&b, 0);
-
-	obj = json_object_from_file(filename);
-	if (is_error(obj))
-		return;
-
-	if (json_object_get_type(obj) == json_type_array) {
-		blobmsg_add_json_element(&b, "events", obj);
-		cwmp_add_events(blob_data(b.head));
-	}
-
-	json_object_put(obj);
-}
