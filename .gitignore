@@ -10,3 +10,4 @@ install_manifest.txt
 /cwmp-session
 /cwmpd
 connreq
+/examples/cache.json
