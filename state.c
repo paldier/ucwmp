@@ -46,16 +46,14 @@ static char *event_command_key[__EVENT_MAX];
 static struct event_multi *event_multi_pending;
 static struct event_multi *event_multi_flagged;
 
-static struct blob_buf b;
-
-static void event_add(const char *id, const char *key)
+static void event_add(struct blob_buf *buf, const char *id, const char *key)
 {
-	void *e = blobmsg_open_array(&b, NULL);
+	void *e = blobmsg_open_array(buf, NULL);
 
-	blobmsg_add_string(&b, NULL, id);
+	blobmsg_add_string(buf, NULL, id);
 	if (key && *key)
-		blobmsg_add_string(&b, NULL, key);
-	blobmsg_close_array(&b, e);
+		blobmsg_add_string(buf, NULL, key);
+	blobmsg_close_array(buf, e);
 }
 
 static void event_free_multi(struct event_multi **head)
@@ -76,12 +74,11 @@ void cwmp_clear_pending_events(void)
 	cwmp_events_changed(false);
 }
 
-char *cwmp_state_get_events(bool pending)
+void cwmp_state_get_events(struct blob_buf *buf, bool pending)
 {
 	struct event_multi **tail = &event_multi_pending;
 	struct event_multi *cur = *tail;
 	unsigned int cur_pending;
-	void *c;
 	int i;
 
 	cur_pending = event_pending | event_flagged;
@@ -97,19 +94,15 @@ char *cwmp_state_get_events(bool pending)
 		event_free_multi(&event_multi_flagged);
 	}
 
-	blob_buf_init(&b, 0);
-
-	c = blobmsg_open_array(&b, NULL);
-
 	for (i = 0; i < __EVENT_MAX; i++) {
 		if (!(cur_pending & (1 << i)))
 			continue;
 
-		event_add(event_codes[i], event_command_key[i]);
+		event_add(buf, event_codes[i], event_command_key[i]);
 	}
 
 	for (tail = &event_multi_pending; *tail; cur = *tail, tail = &cur->next)
-		event_add(event_multi_codes[cur->idx], cur->data);
+		event_add(buf, event_multi_codes[cur->idx], cur->data);
 
 	if (pending) {
 		*tail = event_multi_flagged;
@@ -119,11 +112,7 @@ char *cwmp_state_get_events(bool pending)
 	}
 
 	for (cur = *tail; cur; cur = cur->next)
-		event_add(event_multi_codes[cur->idx], cur->data);
-
-	blobmsg_close_array(&b, c);
-
-	return blobmsg_format_json(blob_data(b.head), false);
+		event_add(buf, event_multi_codes[cur->idx], cur->data);
 }
 
 void cwmp_flag_event(const char *id, const char *command_key)

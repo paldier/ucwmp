@@ -14,6 +14,8 @@
 #ifndef __UCWMP_STATE_H
 #define __UCWMP_STATE_H
 
+#include <libubox/blobmsg.h>
+
 #define DEFAULT_CONNECTION_PORT	8080
 
 enum cwmp_event_single {
@@ -68,7 +70,7 @@ struct cwmp_config {
 extern struct cwmp_config config;
 extern bool session_success;
 
-char *cwmp_state_get_events(bool move_pending);
+void cwmp_state_get_events(struct blob_buf *buf, bool pending);
 void cwmp_flag_event(const char *id, const char *command_key);
 void cwmp_load_events(const char *filename);
 void cwmp_events_changed(bool add);

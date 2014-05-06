@@ -20,6 +20,7 @@
 
 #include <libubox/utils.h>
 #include <libubox/uloop.h>
+#include <libubox/blobmsg_json.h>
 
 #include "state.h"
 
@@ -50,6 +51,8 @@ static int debug_level;
 
 struct cwmp_config config;
 
+static struct blob_buf b;
+
 static const struct uci_parse_option server_opts[__SERVER_INFO_MAX] = {
 	[SERVER_INFO_URL] = { "url", UCI_TYPE_STRING },
 	[SERVER_INFO_USERNAME] = { "username", UCI_TYPE_STRING },
@@ -63,9 +66,20 @@ static const struct uci_parse_option server_opts[__SERVER_INFO_MAX] = {
 	[SERVER_INFO_LOCAL_PASSWORD] = { "local_password", UCI_TYPE_STRING },
 };
 
+static char *cwmp_get_event_str(bool pending)
+{
+	void *c;
+
+	blob_buf_init(&b, 0);
+	c = blobmsg_open_array(&b, NULL);
+	cwmp_state_get_events(&b, pending);
+	blobmsg_close_array(&b, c);
+	return blobmsg_format_json(blob_data(b.head), false);
+}
+
 static void __cwmp_save_events(struct uloop_timeout *timeout)
 {
-	char *events = cwmp_state_get_events(false);
+	char *events = cwmp_get_event_str(false);
 	FILE *f;
 
 	f = fopen(events_file, "w+");
@@ -122,7 +136,7 @@ static void cwmp_exec_session(const char *event_data)
 
 static void cwmp_run_session(void)
 {
-	char *ev = cwmp_state_get_events(true);
+	char *ev = cwmp_get_event_str(true);
 	int pid;
 
 	session_pending = false;
