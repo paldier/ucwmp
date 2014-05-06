@@ -163,28 +163,16 @@ out:
 	cwmp_events_changed(true);
 }
 
-void cwmp_load_events(const char *filename)
+static void cwmp_add_events(struct blob_attr *attr)
 {
 	static const struct blobmsg_policy ev_attr[2] = {
 		{ .type = BLOBMSG_TYPE_STRING },
 		{ .type = BLOBMSG_TYPE_STRING },
 	};
 	struct blob_attr *cur;
-	json_object *obj;
 	int rem;
 
-	blob_buf_init(&b, 0);
-
-	obj = json_object_from_file(filename);
-	if (is_error(obj))
-		return;
-
-	if (json_object_get_type(obj) == json_type_array)
-		goto out;
-
-	blobmsg_add_json_element(&b, "events", obj);
-
-	blobmsg_for_each_attr(cur, blob_data(b.head), rem) {
+	blobmsg_for_each_attr(cur, attr, rem) {
 		struct blob_attr *tb[2];
 
 		blobmsg_parse_array(ev_attr, ARRAY_SIZE(ev_attr), tb,
@@ -197,6 +185,22 @@ void cwmp_load_events(const char *filename)
 				tb[1] ? blobmsg_data(tb[1]) : NULL);
 	}
 
-out:
+}
+
+void cwmp_load_events(const char *filename)
+{
+	json_object *obj;
+
+	blob_buf_init(&b, 0);
+
+	obj = json_object_from_file(filename);
+	if (is_error(obj))
+		return;
+
+	if (json_object_get_type(obj) == json_type_array) {
+		blobmsg_add_json_element(&b, "events", obj);
+		cwmp_add_events(blob_data(b.head));
+	}
+
 	json_object_put(obj);
 }
