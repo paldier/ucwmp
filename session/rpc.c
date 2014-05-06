@@ -378,7 +378,45 @@ static int cwmp_handle_reboot(struct rpc_data *data)
 
 static int cwmp_handle_download(struct rpc_data *data)
 {
-	return CWMP_ERROR_REQUEST_DENIED;
+	static const struct {
+		const char *soap_key;
+		const char *ubus_key;
+	} fields[] = {
+		{ "FileType", "type" },
+		{ "URL", "url" },
+		{ "TargetFileName", "filename" },
+		{ "Username", "username" },
+		{ "Password", "password" },
+	};
+	static struct blob_buf b;
+	node_t *node;
+	int i, ret;
+
+	blob_buf_init(&b, 0);
+
+	for (i = 0; i < ARRAY_SIZE(fields); i++) {
+		char *str;
+		int maxlen = 256;
+
+		str = blobmsg_alloc_string_buffer(&b, fields[i].ubus_key, maxlen);
+		if (!__soap_get_field(data->in, fields[i].soap_key, str, maxlen))
+			continue;
+
+		blobmsg_add_string_buffer(&b);
+	}
+
+	ret = cwmp_notify_download(b.head);
+	blob_buf_free(&b);
+
+	if (ret)
+		return ret;
+
+	node = roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:DownloadResponse", NULL);
+	roxml_add_node(node, 0, ROXML_ELM_NODE, "Status", "0");
+	soap_add_time(node, "StartTime", NULL);
+	soap_add_time(node, "CompleteTime", NULL);
+
+	return ret;
 }
 
 static int cwmp_handle_get_rpc_methods(struct rpc_data *data);

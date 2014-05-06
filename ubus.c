@@ -277,6 +277,42 @@ cwmp_session_completed(struct ubus_context *ctx, struct ubus_object *obj,
 	return 0;
 }
 
+static const struct blobmsg_policy transfer_policy[__CWMP_DL_MAX] = {
+	[CWMP_DL_CKEY] = { "command_key", BLOBMSG_TYPE_STRING },
+	[CWMP_DL_TYPE] = { "type", BLOBMSG_TYPE_STRING },
+	[CWMP_DL_URL] = { "url", BLOBMSG_TYPE_STRING },
+	[CWMP_DL_USERNAME] = { "username", BLOBMSG_TYPE_STRING },
+	[CWMP_DL_PASSWORD] = { "password", BLOBMSG_TYPE_STRING },
+};
+
+static int
+cwmp_download_req(struct ubus_context *ctx, struct ubus_object *obj,
+		  struct ubus_request_data *req, const char *method,
+		  struct blob_attr *msg)
+{
+	struct blob_attr *tb[__CWMP_DL_MAX];
+	struct cwmp_download *dl;
+	struct blob_attr *data;
+	int i;
+
+	dl = calloc_a(sizeof(*dl), &data, blob_pad_len(msg));
+	memcpy(data, msg, blob_pad_len(msg));
+
+	blobmsg_parse(transfer_policy, __CWMP_DL_MAX, tb,
+		      blobmsg_data(data), blobmsg_data_len(data));
+
+	for (i = 0; i < __CWMP_DL_MAX; i++) {
+		if (!tb[i])
+			continue;
+
+		dl->data[i] = blobmsg_data(tb[i]);
+	}
+
+	cwmp_download_add(dl);
+
+	return 0;
+}
+
 static struct ubus_method cwmp_methods[] = {
 	UBUS_METHOD_NOARG("server_info_get", cwmp_server_info_get),
 	UBUS_METHOD("server_info_set", cwmp_server_info_set, info_policy),
@@ -284,6 +320,8 @@ static struct ubus_method cwmp_methods[] = {
 	UBUS_METHOD_NOARG("connection_request", cwmp_connection_request),
 	UBUS_METHOD_NOARG("event_sent", cwmp_event_sent),
 	UBUS_METHOD("event_add", cwmp_event_add, event_policy),
+
+	UBUS_METHOD("download_add", cwmp_download_req, transfer_policy),
 
 	UBUS_METHOD_NOARG("session_completed", cwmp_session_completed),
 };

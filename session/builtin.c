@@ -277,3 +277,9 @@ void cwmp_notify_completed(void)
 	blob_buf_init(&b, 0);
 	ubus_invoke(ubus_ctx, cwmp_id, "session_completed", b.head, NULL, NULL, 0);
 }
+
+int cwmp_notify_download(struct blob_attr *data)
+{
+	ubus_invoke(ubus_ctx, cwmp_id, "download_add", data, NULL, NULL, 0);
+	return 0;
+}

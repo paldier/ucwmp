@@ -16,6 +16,7 @@
 
 #include <netinet/in.h>
 #include <libubox/avl.h>
+#include <libubox/blobmsg.h>
 #include <roxml.h>
 
 #include "soap.h"
@@ -80,6 +81,8 @@ void server_update_local_addr(const char *addr);
 void cwmp_update_url(const char *url, const char *auth_str);
 void cwmp_load_events(const char *filename);
 void cwmp_clear_pending_events(void);
+
+int cwmp_notify_download(struct blob_attr *data);
 
 void cwmp_add_parameter_value_struct(node_t *node, const char *name, const char *value, const char *type);
 

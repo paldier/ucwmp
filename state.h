@@ -67,6 +67,19 @@ struct cwmp_config {
 	const char *local_password;
 };
 
+enum cwmp_dl {
+	CWMP_DL_CKEY,
+	CWMP_DL_TYPE,
+	CWMP_DL_URL,
+	CWMP_DL_USERNAME,
+	CWMP_DL_PASSWORD,
+	__CWMP_DL_MAX,
+};
+
+struct cwmp_download {
+	const char *data[__CWMP_DL_MAX];
+};
+
 extern struct cwmp_config config;
 extern bool session_success;
 
@@ -75,6 +88,8 @@ void cwmp_state_get_events(struct blob_buf *buf, bool pending);
 void cwmp_flag_event(const char *id, const char *command_key);
 void cwmp_events_changed(bool add);
 void cwmp_clear_pending_events(void);
+
+void cwmp_download_add(struct cwmp_download *dl);
 
 int cwmp_update_config(enum cwmp_config_change changed);
 void cwmp_commit_config(void);
