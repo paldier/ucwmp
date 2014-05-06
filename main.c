@@ -11,6 +11,8 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+#include <sys/stat.h>
+
 #include <stdio.h>
 #include <getopt.h>
 #include <stdlib.h>
@@ -37,13 +39,13 @@
 #endif
 
 #define CWMP_INFO_FILE	CWMP_INFO_DIR "/cwmp-device.json"
-#define CWMP_EVENT_FILE	CWMP_INFO_DIR "/events.json"
+#define CWMP_CACHE_FILE	CWMP_INFO_DIR "/cache.json"
 
 static struct uci_context *uci_ctx;
 static const char *session_path = CWMP_SESSION_BIN;
 static const char *devinfo_path = CWMP_INFO_FILE;
 static const char *config_path = CWMP_CONFIG_DIR;
-static const char *events_file = CWMP_EVENT_FILE;
+static const char *cache_file = CWMP_CACHE_FILE;
 
 bool session_success = false;
 static bool session_pending;
@@ -77,23 +79,31 @@ static char *cwmp_get_event_str(bool pending)
 	return blobmsg_format_json(blob_data(b.head), false);
 }
 
-static void __cwmp_save_events(struct uloop_timeout *timeout)
+static void __cwmp_save_cache(struct uloop_timeout *timeout)
 {
-	char *events = cwmp_get_event_str(false);
+	char *str;
 	FILE *f;
+	void *c;
 
-	f = fopen(events_file, "w+");
+	blob_buf_init(&b, 0);
+
+	f = fopen(cache_file, "w+");
 	if (!f)
 		return;
 
-	fwrite(events, strlen(events), 1, f);
-	fclose(f);
+	c = blobmsg_open_array(&b, "events");
+	cwmp_state_get_events(&b, false);
+	blobmsg_close_array(&b, c);
 
-	free(events);
+	str = blobmsg_format_json(b.head, true);
+	fwrite(str, strlen(str), 1, f);
+	free(str);
+
+	fclose(f);
 }
 
-static struct uloop_timeout save_events = {
-	.cb = __cwmp_save_events,
+static struct uloop_timeout save_cache = {
+	.cb = __cwmp_save_cache,
 };
 
 static void session_cb(struct uloop_process *c, int ret);
@@ -200,7 +210,7 @@ void cwmp_events_changed(bool add)
 {
 	if (add)
 		cwmp_schedule_session();
-	uloop_timeout_set(&save_events, 1);
+	uloop_timeout_set(&save_cache, 1);
 }
 
 static int cwmp_get_config_section(struct uci_ptr *ptr)
@@ -326,29 +336,35 @@ static int usage(const char *prog)
 		"Options:\n"
 		"	-c <path>       Path to UCI config file (default: %s)\n"
 		"	-I <file>       Device information file (default: " CWMP_INFO_FILE ")\n"
-		"	-E <file>       CWMP events storage file (default: " CWMP_EVENT_FILE ")\n"
+		"	-E <file>       CWMP cache storage file (default: " CWMP_CACHE_FILE ")\n"
 		"	-d              Increase debug level\n"
 		"	-s <path>       Path to session tool\n"
 		"\n", prog, CWMP_CONFIG_DIR ? CWMP_CONFIG_DIR : UCI_CONFDIR);
 	return 1;
 }
 
-static void cwmp_load_events(const char *filename)
+static void cwmp_load_cache(const char *filename)
 {
-	json_object *obj;
+	enum {
+		CACHE_EVENTS,
+		__CACHE_MAX,
+	};
+	static const struct blobmsg_policy policy[__CACHE_MAX] = {
+		[CACHE_EVENTS] = { "events", BLOBMSG_TYPE_ARRAY },
+	};
+	struct blob_attr *tb[__CACHE_MAX];
+	struct stat st;
 
-	blob_buf_init(&b, 0);
-
-	obj = json_object_from_file(filename);
-	if (is_error(obj))
+	if (stat(filename, &st) != 0)
 		return;
 
-	if (json_object_get_type(obj) == json_type_array) {
-		blobmsg_add_json_element(&b, "events", obj);
-		cwmp_add_events(blob_data(b.head));
-	}
+	blob_buf_init(&b, 0);
+	blobmsg_add_json_from_file(&b, filename);
 
-	json_object_put(obj);
+	blobmsg_parse(policy, __CACHE_MAX, tb, blob_data(b.head), blob_len(b.head));
+
+	if (tb[CACHE_EVENTS])
+		cwmp_add_events(tb[CACHE_EVENTS]);
 }
 
 int main(int argc, char **argv)
@@ -366,7 +382,7 @@ int main(int argc, char **argv)
 			devinfo_path = optarg;
 			break;
 		case 'E':
-			events_file = optarg;
+			cache_file = optarg;
 			break;
 		case 'd':
 			debug_level++;
@@ -391,8 +407,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	cwmp_load_events(events_file);
-	uloop_timeout_cancel(&save_events);
+	cwmp_load_cache(cache_file);
+	uloop_timeout_cancel(&save_cache);
 	cwmp_schedule_session();
 	cwmp_update_session_timer();
 	uloop_run();
