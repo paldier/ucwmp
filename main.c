@@ -179,7 +179,7 @@ static void session_cb(struct uloop_process *c, int ret)
 		cwmp_run_session();
 }
 
-static void cwmp_schedule_session(void)
+void cwmp_schedule_session(void)
 {
 	if (session_proc.pending) {
 		session_pending = true;
@@ -208,11 +208,14 @@ static void cwmp_update_session_timer(void)
 		uloop_timeout_cancel(&timer);
 }
 
-void cwmp_events_changed(bool add)
+void cwmp_save_cache(bool immediate)
 {
-	if (add)
-		cwmp_schedule_session();
-	uloop_timeout_set(&save_cache, 1);
+	if (immediate) {
+		uloop_timeout_cancel(&save_cache);
+		save_cache.cb(&save_cache);
+	} else {
+		uloop_timeout_set(&save_cache, 1);
+	}
 }
 
 static int cwmp_get_config_section(struct uci_ptr *ptr)

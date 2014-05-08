@@ -71,7 +71,7 @@ void cwmp_clear_pending_events(void)
 {
 	event_pending = 0;
 	event_free_multi(&event_multi_pending);
-	cwmp_events_changed(false);
+	cwmp_save_cache(false);
 }
 
 void cwmp_state_get_events(struct blob_buf *buf, bool pending)
@@ -149,7 +149,8 @@ void cwmp_flag_event(const char *id, const char *command_key)
 	return;
 
 out:
-	cwmp_events_changed(true);
+	cwmp_schedule_session();
+	cwmp_save_cache(false);
 }
 
 void cwmp_add_events(struct blob_attr *attr)
