@@ -11,7 +11,13 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+#include <signal.h>
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <libubox/uloop.h>
+#include <libubox/uclient-utils.h>
+
 #include "state.h"
 
 static LIST_HEAD(downloads);
@@ -19,6 +25,8 @@ static LIST_HEAD(downloads);
 enum download_state {
 	DL_STATE_NEW,
 	DL_STATE_READY,
+	DL_STATE_DOWNLOAD,
+	DL_STATE_APPLY,
 };
 
 struct cwmp_download {
@@ -36,6 +44,10 @@ struct cwmp_download {
 
 	enum download_state state;
 };
+
+static struct cwmp_download *cur_download;
+static char *cur_dl_file, *cur_dl_path;
+static struct uloop_process dl_proc;
 
 const struct blobmsg_policy transfer_policy[__CWMP_DL_MAX] = {
 	[CWMP_DL_CKEY] = { "command_key", BLOBMSG_TYPE_STRING },
@@ -88,6 +100,7 @@ void cwmp_download_add(struct blob_attr *attr, bool internal)
 	struct blob_attr *tb[__CWMP_DL_MAX];
 	struct cwmp_download *dl;
 	struct blob_attr *data, *cur;
+	int state = DL_STATE_NEW;
 
 	dl = calloc_a(sizeof(*dl), &data, blob_pad_len(attr));
 	memcpy(data, attr, blob_pad_len(attr));
@@ -108,7 +121,22 @@ void cwmp_download_add(struct blob_attr *attr, bool internal)
 	dl->start = blobmsg_get_u32(cur);
 
 	if (internal && (cur = tb[CWMP_DL_STATE]))
-		dl->state = blobmsg_get_u32(cur);
+		state = blobmsg_get_u32(cur);
+
+	switch (state) {
+	case DL_STATE_DOWNLOAD:
+		dl->state = DL_STATE_READY;
+		break;
+	case DL_STATE_APPLY:
+		if (!cur_download)
+			cur_download = dl;
+	case DL_STATE_NEW:
+	case DL_STATE_READY:
+		dl->state = state;
+		break;
+	default:
+		break;
+	}
 
 	if (!dl->url || !dl->type)
 		goto error;
@@ -124,17 +152,127 @@ error:
 	free(dl);
 }
 
+static void cwmp_download_reset(void)
+{
+	if (dl_proc.pending) {
+		kill(dl_proc.pid, SIGKILL);
+		uloop_process_delete(&dl_proc);
+	}
+
+	cur_download = NULL;
+
+	free(cur_dl_file);
+	cur_dl_file = NULL;
+
+	free(cur_dl_path);
+	cur_dl_path = NULL;
+}
+
 static void cwmp_download_delete(struct cwmp_download *dl)
 {
+	if (dl == cur_download)
+		return;
+
 	uloop_timeout_cancel(&dl->timeout);
 	list_del(&dl->list);
 	free(dl);
 }
 
-static void cwmp_download_ready(struct cwmp_download *dl)
+static void cwmp_download_failed(void)
 {
-	uloop_timeout_cancel(&dl->timeout);
-	/* start */
+	struct cwmp_download *dl = cur_download;
+
+	cwmp_download_reset();
+	cwmp_download_delete(dl);
+}
+
+static void cwmp_download_apply_cb(struct uloop_process *p, int ret)
+{
+}
+
+static void cwmp_download_apply(struct cwmp_download *dl)
+{
+	dl->state = DL_STATE_APPLY;
+	dl_proc.cb = cwmp_download_apply_cb;
+
+	dl_proc.pid = fork();
+	switch (dl_proc.pid) {
+	case 0:
+		cwmp_download_apply_exec(cur_dl_path, dl->type, cur_dl_file);
+		break;
+	case -1:
+		cwmp_download_failed();
+		break;
+	default:
+		uloop_process_add(&dl_proc);
+		break;
+	}
+}
+
+static void cwmp_download_cb(struct uloop_process *p, int ret)
+{
+	if (!cur_download)
+		return;
+
+	if (ret) {
+		cwmp_download_failed();
+		return;
+	}
+
+	cwmp_download_apply(cur_download);
+}
+
+static void cwmp_download_run(void)
+{
+	struct cwmp_download *dl = cur_download;
+	const char *argv[] = {
+		"uclient-fetch",
+		"-O",
+		cur_dl_path,
+		"--user",
+		dl->username ? dl->username : "",
+		"--password",
+		dl->password ? dl->password : "",
+		dl->url,
+		NULL
+	};
+
+	execvp(argv[0], (char **) argv);
+	exit(255);
+}
+
+static void cwmp_download_start(struct cwmp_download *dl)
+{
+	const char *cur_name;
+
+	cwmp_download_reset();
+
+	cur_download = dl;
+	dl->state = DL_STATE_DOWNLOAD;
+
+	if (dl->filename)
+		cur_dl_file = strdup(dl->filename);
+	else
+		cur_dl_file = uclient_get_url_filename(dl->url, "file");
+
+	cur_name = strrchr(cur_dl_file, '/');
+	cur_name = cur_name ? cur_name + 1 : cur_dl_file;
+
+	asprintf(&cur_dl_path, "/tmp/download.%d.%s", dl->start, cur_name);
+	dl_proc.cb = cwmp_download_cb;
+
+	dl_proc.pid = fork();
+	switch (dl_proc.pid) {
+	case 0:
+		cwmp_download_run();
+		break;
+	case -1:
+		cwmp_download_failed();
+		break;
+	default:
+		uloop_process_add(&dl_proc);
+		break;
+	}
 }
 
 static void cwmp_download_timer(struct uloop_timeout *timeout)
@@ -170,6 +308,10 @@ void cwmp_download_check_pending(bool session_complete)
 			continue;
 		}
 
-		cwmp_download_ready(dl);
+		uloop_timeout_cancel(&dl->timeout);
+		if (cur_download)
+			continue;
+
+		cwmp_download_start(dl);
 	}
 }

@@ -95,6 +95,7 @@ void cwmp_save_cache(bool immediate);
 
 void cwmp_download_add(struct blob_attr *data, bool internal);
 void cwmp_download_check_pending(bool session_complete);
+void cwmp_download_apply_exec(const char *path, const char *type, const char *file);
 
 int cwmp_update_config(enum cwmp_config_change changed);
 void cwmp_commit_config(void);

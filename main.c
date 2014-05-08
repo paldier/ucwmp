@@ -31,11 +31,13 @@
 #define CWMP_ETC_DIR "./etc"
 #define CWMP_CONFIG_DIR	CWMP_ETC_DIR "/config"
 #define CWMP_SESSION_BIN "./cwmp-session"
+#define CWMP_SCRIPT_DIR "./scripts"
 #else
 #define CWMP_CONFIG_DIR	NULL /* UCI default */
 #define CWMP_ETC_DIR "/etc"
 #define CWMP_SESSION_BIN "cwmp-session"
 #define CWMP_MODEL_DIR CWMP_ETC_DIR "/model"
+#define CWMP_SCRIPT_DIR "/usr/share/cwmp/scripts"
 #endif
 
 #define CWMP_INFO_FILE	CWMP_ETC_DIR "/cwmp-device.json"
@@ -145,6 +147,20 @@ static void cwmp_exec_session(const char *event_data)
 	argv[argc] = NULL;
 	snprintf(debug_str, sizeof(debug_str), "%d", debug_level);
 	execvp(argv[0], (char * const *) argv);
+	exit(255);
+}
+
+void cwmp_download_apply_exec(const char *path, const char *type, const char *file)
+{
+	const char *argv[] = {
+		CWMP_SCRIPT_DIR "/apply.sh",
+		path,
+		type,
+		file,
+		NULL,
+	};
+
+	execvp(argv[0], (char **) argv);
 	exit(255);
 }
 
