@@ -85,6 +85,7 @@ extern const struct blobmsg_policy transfer_policy[__CWMP_DL_MAX];
 
 void cwmp_add_events(struct blob_attr *attr);
 void cwmp_state_get_events(struct blob_buf *buf, bool pending);
+void cwmp_state_get_downloads(struct blob_buf *buf);
 void cwmp_flag_event(const char *id, const char *command_key);
 void cwmp_clear_pending_events(void);
 

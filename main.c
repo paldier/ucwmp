@@ -95,6 +95,10 @@ static void __cwmp_save_cache(struct uloop_timeout *timeout)
 	cwmp_state_get_events(&b, false);
 	blobmsg_close_array(&b, c);
 
+	c = blobmsg_open_array(&b, "downloads");
+	cwmp_state_get_downloads(&b);
+	blobmsg_close_array(&b, c);
+
 	str = blobmsg_format_json(b.head, true);
 	fwrite(str, strlen(str), 1, f);
 	free(str);

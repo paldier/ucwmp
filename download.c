@@ -54,6 +54,32 @@ static const char *get_string(struct blob_attr *data)
 	return blobmsg_data(data);
 }
 
+static void add_string(struct blob_buf *buf, int field, const char *val)
+{
+	if (!val)
+		return;
+
+	blobmsg_add_string(buf, transfer_policy[field].name, val);
+}
+
+void cwmp_state_get_downloads(struct blob_buf *buf)
+{
+	struct cwmp_download *dl;
+	void *c;
+
+	list_for_each_entry(dl, &downloads, list) {
+		c = blobmsg_open_table(buf, NULL);
+		add_string(buf, CWMP_DL_CKEY, dl->ckey);
+		add_string(buf, CWMP_DL_TYPE, dl->type);
+		add_string(buf, CWMP_DL_URL, dl->url);
+		add_string(buf, CWMP_DL_USERNAME, dl->username);
+		add_string(buf, CWMP_DL_PASSWORD, dl->password);
+		blobmsg_add_u32(buf, transfer_policy[CWMP_DL_STATE].name, dl->state);
+		blobmsg_add_u32(buf, transfer_policy[CWMP_DL_START].name, dl->start);
+		blobmsg_close_table(buf, c);
+	}
+}
+
 void cwmp_download_add(struct blob_attr *attr, bool internal)
 {
 	struct blob_attr *tb[__CWMP_DL_MAX];
@@ -86,6 +112,9 @@ void cwmp_download_add(struct blob_attr *attr, bool internal)
 
 	fprintf(stderr, "Add download, type=%s url=%s\n", dl->type, dl->url);
 	list_add(&dl->list, &downloads);
+	if (!internal)
+		cwmp_save_cache(false);
+
 	return;
 
 error:
