@@ -74,6 +74,7 @@ enum cwmp_dl {
 	CWMP_DL_URL,
 	CWMP_DL_USERNAME,
 	CWMP_DL_PASSWORD,
+	CWMP_DL_STATE,
 	__CWMP_DL_MAX,
 };
 

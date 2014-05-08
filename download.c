@@ -15,13 +15,20 @@
 
 static LIST_HEAD(downloads);
 
+enum download_state {
+	DL_STATE_NEW,
+};
+
 struct cwmp_download {
 	struct list_head list;
+
 	const char *ckey;
 	const char *type;
 	const char *url;
 	const char *username;
 	const char *password;
+
+	enum download_state state;
 };
 
 const struct blobmsg_policy transfer_policy[__CWMP_DL_MAX] = {
@@ -30,6 +37,7 @@ const struct blobmsg_policy transfer_policy[__CWMP_DL_MAX] = {
 	[CWMP_DL_URL] = { "url", BLOBMSG_TYPE_STRING },
 	[CWMP_DL_USERNAME] = { "username", BLOBMSG_TYPE_STRING },
 	[CWMP_DL_PASSWORD] = { "password", BLOBMSG_TYPE_STRING },
+	[CWMP_DL_STATE] = { "state", BLOBMSG_TYPE_INT32 },
 };
 
 static const char *get_string(struct blob_attr *data)
@@ -44,7 +52,7 @@ void cwmp_download_add(struct blob_attr *attr, bool internal)
 {
 	struct blob_attr *tb[__CWMP_DL_MAX];
 	struct cwmp_download *dl;
-	struct blob_attr *data;
+	struct blob_attr *data, *cur;
 
 	dl = calloc_a(sizeof(*dl), &data, blob_pad_len(attr));
 	memcpy(data, attr, blob_pad_len(attr));
@@ -57,6 +65,9 @@ void cwmp_download_add(struct blob_attr *attr, bool internal)
 	dl->url = get_string(tb[CWMP_DL_URL]);
 	dl->username = get_string(tb[CWMP_DL_USERNAME]);
 	dl->password = get_string(tb[CWMP_DL_PASSWORD]);
+
+	if (internal && (cur = tb[CWMP_DL_STATE]))
+		dl->state = blobmsg_get_u32(cur);
 
 	if (!dl->url || !dl->type) {
 		free(dl);
