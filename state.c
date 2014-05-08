@@ -140,6 +140,14 @@ void cwmp_flag_event(const char *id, const char *command_key, struct blob_attr *
 		if (!command_key)
 			command_key = "";
 
+		switch (i) {
+		case EVENT_M_UPLOAD:
+		case EVENT_M_DOWNLOAD:
+		case EVENT_M_SCHEDULE_DOWNLOAD:
+			event_flagged |= (1 << EVENT_TRANSFER_COMPLETE);
+			break;
+		}
+
 		ev = calloc_a(sizeof(*ev) + strlen(id) + 1,
 			&extra, data ? blob_pad_len(data) : 0);
 		ev->idx = i;

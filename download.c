@@ -180,11 +180,18 @@ static void cwmp_download_reset(void)
 	cur_dl_path = NULL;
 }
 
-static void __cwmp_download_done(struct cwmp_download *dl)
+static void __cwmp_download_done(struct cwmp_download *dl, int code)
 {
+	static struct blob_buf b;
+
 	if (dl == cur_download)
 		cwmp_download_reset();
 
+	blob_buf_init(&b, 0);
+	blobmsg_add_string(&b, "type", "TransferComplete");
+	blobmsg_add_u32(&b, "error", code);
+
+	cwmp_flag_event("M Download", dl->ckey, b.head);
 	cwmp_download_delete(dl);
 }
 
@@ -209,16 +216,8 @@ void cwmp_download_done(struct blob_attr *attr)
 		if (strcmp(dl->url, url) != 0)
 			continue;
 
-		__cwmp_download_done(dl);
+		__cwmp_download_done(dl, 0);
 	}
-}
-
-static void cwmp_download_failed(void)
-{
-	struct cwmp_download *dl = cur_download;
-
-	cwmp_download_reset();
-	cwmp_download_delete(dl);
 }
 
 static void cwmp_download_apply_cb(struct uloop_process *p, int ret)
@@ -238,7 +237,7 @@ static void cwmp_download_apply(struct cwmp_download *dl)
 		cwmp_download_apply_exec(cur_dl_path, dl->type, cur_dl_file, dl->url);
 		break;
 	case -1:
-		cwmp_download_failed();
+		__cwmp_download_done(dl, 9002);
 		break;
 	default:
 		uloop_process_add(&dl_proc);
@@ -252,7 +251,7 @@ static void cwmp_download_cb(struct uloop_process *p, int ret)
 		return;
 
 	if (ret) {
-		cwmp_download_failed();
+		__cwmp_download_done(cur_download, 9015);
 		return;
 	}
 
@@ -304,7 +303,7 @@ static void cwmp_download_start(struct cwmp_download *dl)
 		cwmp_download_run();
 		break;
 	case -1:
-		cwmp_download_failed();
+		__cwmp_download_done(dl, 9002);
 		break;
 	default:
 		uloop_process_add(&dl_proc);

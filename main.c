@@ -102,6 +102,8 @@ static void __cwmp_save_cache(struct uloop_timeout *timeout)
 	blobmsg_close_array(&b, c);
 
 	str = blobmsg_format_json(b.head, true);
+	if (debug_level)
+		fprintf(stderr, "Updated cache: %s\n", str);
 	fwrite(str, strlen(str), 1, f);
 	free(str);
 
