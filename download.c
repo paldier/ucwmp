@@ -107,10 +107,10 @@ static void cwmp_download_ready(struct cwmp_download *dl)
 
 static void cwmp_download_timer(struct uloop_timeout *timeout)
 {
-	cwmp_download_check_pending();
+	cwmp_download_check_pending(false);
 }
 
-void cwmp_download_check_pending(void)
+void cwmp_download_check_pending(bool session_complete)
 {
 	struct cwmp_download *dl, *tmp;
 	struct timeval tv;
@@ -119,6 +119,13 @@ void cwmp_download_check_pending(void)
 
 	list_for_each_entry_safe(dl, tmp, &downloads, list) {
 		int64_t offset = (int64_t) tv.tv_sec - (int64_t) dl->start;
+
+		if (dl->state == DL_STATE_NEW) {
+			if (!session_complete)
+				continue;
+			else
+				dl->state = DL_STATE_READY;
+		}
 
 		if (offset < 0) {
 			dl->timeout.cb = cwmp_download_timer;

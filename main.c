@@ -170,6 +170,8 @@ static void cwmp_run_session(void)
 
 static void session_cb(struct uloop_process *c, int ret)
 {
+	cwmp_download_check_pending(true);
+
 	if (debug_level)
 		fprintf(stderr, "Session completed (success: %d)\n", session_success);
 
