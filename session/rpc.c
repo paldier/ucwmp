@@ -24,7 +24,7 @@
 #include "attr.h"
 #include "object.h"
 
-struct blob_buf events;
+struct blob_buf events = {};
 
 static node_t *cwmp_open_array(node_t *node, const char *name)
 {
