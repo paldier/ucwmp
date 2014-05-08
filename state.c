@@ -176,16 +176,3 @@ void cwmp_add_events(struct blob_attr *attr)
 
 }
 
-void cwmp_download_add(struct cwmp_download *dl)
-{
-	const char *url = dl->data[CWMP_DL_URL];
-	const char *type = dl->data[CWMP_DL_TYPE];
-
-	if (!url || !type)
-		goto out;
-
-	fprintf(stderr, "Add download, type=%s url=%s\n", type, url);
-
-out:
-	free(dl);
-}

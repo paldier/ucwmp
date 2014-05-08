@@ -21,7 +21,7 @@ ADD_EXECUTABLE(cwmp-session
 	session/main.c session/rpc.c session/soap.c session/attr.c
 	session/builtin.c session/object.c session/backend.c)
 
-ADD_EXECUTABLE(cwmpd main.c state.c ubus.c)
+ADD_EXECUTABLE(cwmpd main.c state.c ubus.c download.c)
 ADD_EXECUTABLE(connreq connreq.c)
 
 find_library(json NAMES json-c json)

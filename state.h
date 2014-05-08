@@ -14,6 +14,7 @@
 #ifndef __UCWMP_STATE_H
 #define __UCWMP_STATE_H
 
+#include <libubox/list.h>
 #include <libubox/blobmsg.h>
 
 #define DEFAULT_CONNECTION_PORT	8080
@@ -76,12 +77,9 @@ enum cwmp_dl {
 	__CWMP_DL_MAX,
 };
 
-struct cwmp_download {
-	const char *data[__CWMP_DL_MAX];
-};
-
 extern struct cwmp_config config;
 extern bool session_success;
+extern const struct blobmsg_policy transfer_policy[__CWMP_DL_MAX];
 
 void cwmp_add_events(struct blob_attr *attr);
 void cwmp_state_get_events(struct blob_buf *buf, bool pending);
@@ -89,7 +87,7 @@ void cwmp_flag_event(const char *id, const char *command_key);
 void cwmp_events_changed(bool add);
 void cwmp_clear_pending_events(void);
 
-void cwmp_download_add(struct cwmp_download *dl);
+void cwmp_download_add(struct blob_attr *data, bool internal);
 
 int cwmp_update_config(enum cwmp_config_change changed);
 void cwmp_commit_config(void);
