@@ -395,6 +395,7 @@ static int cwmp_handle_download(struct rpc_data *data)
 		{ "TargetFileName", "filename" },
 		{ "Username", "username" },
 		{ "Password", "password" },
+		{ "CommandKey", "command_key" },
 	};
 	static struct blob_buf b;
 	struct timeval tv;
