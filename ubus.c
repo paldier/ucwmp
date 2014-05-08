@@ -76,13 +76,17 @@ static bool conn_req_check_digest(struct blob_attr **tb)
 
 static bool conn_req_validate(struct blob_attr **tb)
 {
+	const char *password = "";
 	int i;
 
-	if (!config.local_username || !config.local_password)
-		return false;
+	if (!config.local_username)
+		return true;
+
+	if (config.local_password)
+		password = config.local_password;
 
 	http_digest_calculate_auth_hash(auth_md5, config.local_username,
-					auth_realm, config.local_password);
+					auth_realm, password);
 
 	for (i = 0; i < __CONN_REQ_MAX; i++) {
 		if (!tb[i])
