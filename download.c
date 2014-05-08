@@ -203,6 +203,9 @@ void cwmp_download_done(struct blob_attr *attr)
 	url = blobmsg_data(tb[CWMP_DL_URL]);
 
 	list_for_each_entry_safe(dl, tmp, &downloads, list) {
+		if (dl->state != DL_STATE_APPLY)
+			continue;
+
 		if (strcmp(dl->url, url) != 0)
 			continue;
 
