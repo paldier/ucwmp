@@ -142,7 +142,7 @@ void cwmp_download_add(struct blob_attr *attr, bool internal)
 		goto error;
 
 	fprintf(stderr, "Add download, type=%s url=%s\n", dl->type, dl->url);
-	list_add(&dl->list, &downloads);
+	list_add_tail(&dl->list, &downloads);
 	if (!internal)
 		cwmp_save_cache(false);
 
