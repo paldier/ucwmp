@@ -389,8 +389,10 @@ static int cwmp_handle_download(struct rpc_data *data)
 		{ "Password", "password" },
 	};
 	static struct blob_buf b;
+	struct timeval tv;
 	node_t *node;
 	int i, ret;
+	int delay;
 
 	blob_buf_init(&b, 0);
 
@@ -404,6 +406,15 @@ static int cwmp_handle_download(struct rpc_data *data)
 
 		blobmsg_add_string_buffer(&b);
 	}
+
+	if (soap_get_int_field(data->in, "DelaySeconds", &delay))
+		delay = 0;
+
+	if (delay < 0)
+		delay = 0;
+
+	gettimeofday(&tv, NULL);
+	blobmsg_add_u32(&b, "start", tv.tv_sec + delay);
 
 	ret = cwmp_notify_download(b.head);
 	blob_buf_free(&b);

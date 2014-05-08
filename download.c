@@ -28,6 +28,8 @@ struct cwmp_download {
 	const char *username;
 	const char *password;
 
+	uint32_t start;
+
 	enum download_state state;
 };
 
@@ -38,6 +40,7 @@ const struct blobmsg_policy transfer_policy[__CWMP_DL_MAX] = {
 	[CWMP_DL_USERNAME] = { "username", BLOBMSG_TYPE_STRING },
 	[CWMP_DL_PASSWORD] = { "password", BLOBMSG_TYPE_STRING },
 	[CWMP_DL_STATE] = { "state", BLOBMSG_TYPE_INT32 },
+	[CWMP_DL_START] = { "start", BLOBMSG_TYPE_INT32 },
 };
 
 static const char *get_string(struct blob_attr *data)
@@ -66,14 +69,22 @@ void cwmp_download_add(struct blob_attr *attr, bool internal)
 	dl->username = get_string(tb[CWMP_DL_USERNAME]);
 	dl->password = get_string(tb[CWMP_DL_PASSWORD]);
 
+	cur = tb[CWMP_DL_START];
+	if (!cur)
+		goto error;
+
+	dl->start = blobmsg_get_u32(cur);
+
 	if (internal && (cur = tb[CWMP_DL_STATE]))
 		dl->state = blobmsg_get_u32(cur);
 
-	if (!dl->url || !dl->type) {
-		free(dl);
-		return;
-	}
+	if (!dl->url || !dl->type)
+		goto error;
 
 	fprintf(stderr, "Add download, type=%s url=%s\n", dl->type, dl->url);
 	list_add(&dl->list, &downloads);
+	return;
+
+error:
+	free(dl);
 }
