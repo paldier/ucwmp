@@ -152,6 +152,18 @@ error:
 	free(dl);
 }
 
+static void cwmp_download_delete(struct cwmp_download *dl)
+{
+	if (dl == cur_download)
+		return;
+
+	uloop_timeout_cancel(&dl->timeout);
+	list_del(&dl->list);
+	free(dl);
+
+	cwmp_save_cache(false);
+}
+
 static void cwmp_download_reset(void)
 {
 	if (dl_proc.pending) {
@@ -168,14 +180,34 @@ static void cwmp_download_reset(void)
 	cur_dl_path = NULL;
 }
 
-static void cwmp_download_delete(struct cwmp_download *dl)
+static void __cwmp_download_done(struct cwmp_download *dl)
 {
 	if (dl == cur_download)
+		cwmp_download_reset();
+
+	cwmp_download_delete(dl);
+}
+
+void cwmp_download_done(struct blob_attr *attr)
+{
+	struct blob_attr *tb[__CWMP_DL_MAX];
+	struct cwmp_download *dl, *tmp;
+	const char *url;
+
+	blobmsg_parse(transfer_policy, __CWMP_DL_MAX, tb,
+		      blobmsg_data(attr), blobmsg_data_len(attr));
+
+	if (!tb[CWMP_DL_URL])
 		return;
 
-	uloop_timeout_cancel(&dl->timeout);
-	list_del(&dl->list);
-	free(dl);
+	url = blobmsg_data(tb[CWMP_DL_URL]);
+
+	list_for_each_entry_safe(dl, tmp, &downloads, list) {
+		if (strcmp(dl->url, url) != 0)
+			continue;
+
+		__cwmp_download_done(dl);
+	}
 }
 
 static void cwmp_download_failed(void)
@@ -198,7 +230,7 @@ static void cwmp_download_apply(struct cwmp_download *dl)
 	dl_proc.pid = fork();
 	switch (dl_proc.pid) {
 	case 0:
-		cwmp_download_apply_exec(cur_dl_path, dl->type, cur_dl_file);
+		cwmp_download_apply_exec(cur_dl_path, dl->type, cur_dl_file, dl->url);
 		break;
 	case -1:
 		cwmp_download_failed();

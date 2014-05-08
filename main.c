@@ -150,13 +150,14 @@ static void cwmp_exec_session(const char *event_data)
 	exit(255);
 }
 
-void cwmp_download_apply_exec(const char *path, const char *type, const char *file)
+void cwmp_download_apply_exec(const char *path, const char *type, const char *file, const char *url)
 {
 	const char *argv[] = {
 		CWMP_SCRIPT_DIR "/apply.sh",
 		path,
 		type,
 		file,
+		url,
 		NULL,
 	};
 
