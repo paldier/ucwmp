@@ -213,7 +213,7 @@ static void cwmp_update_session_timer(void);
 static void __cwmp_session_timer(struct uloop_timeout *timeout)
 {
 	cwmp_schedule_session();
-	cwmp_flag_event("2 PERIODIC", NULL);
+	cwmp_flag_event("2 PERIODIC", NULL, NULL);
 	cwmp_update_session_timer();
 }
 
@@ -328,7 +328,7 @@ int cwmp_update_config(enum cwmp_config_change changed)
 		for (i = 0; i < ARRAY_SIZE(config.acs_info); i++)
 			cwmp_set_string_option(&ptr, server_opts[i].name, config.acs_info[i]);
 
-		cwmp_flag_event("0 BOOTSTRAP", NULL);
+		cwmp_flag_event("0 BOOTSTRAP", NULL, NULL);
 		break;
 	case CONFIG_CHANGE_PERIODIC_INFO:
 		cwmp_set_int_option(&ptr, "periodic_interval", config.periodic_interval);

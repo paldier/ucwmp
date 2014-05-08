@@ -19,7 +19,8 @@
 struct event_multi {
 	struct event_multi *next;
 	enum cwmp_event_multi idx;
-	char data[];
+	struct blob_attr *data;
+	char command_key[];
 };
 
 static const char *event_codes[__EVENT_MAX] = {
@@ -46,7 +47,7 @@ static char *event_command_key[__EVENT_MAX];
 static struct event_multi *event_multi_pending;
 static struct event_multi *event_multi_flagged;
 
-static void event_add(struct blob_buf *buf, const char *id, const char *key)
+static void event_add(struct blob_buf *buf, const char *id, const char *key, struct blob_attr *data)
 {
 	void *e = blobmsg_open_array(buf, NULL);
 
@@ -98,11 +99,11 @@ void cwmp_state_get_events(struct blob_buf *buf, bool pending)
 		if (!(cur_pending & (1 << i)))
 			continue;
 
-		event_add(buf, event_codes[i], event_command_key[i]);
+		event_add(buf, event_codes[i], event_command_key[i], NULL);
 	}
 
 	for (tail = &event_multi_pending; *tail; cur = *tail, tail = &cur->next)
-		event_add(buf, event_multi_codes[cur->idx], cur->data);
+		event_add(buf, event_multi_codes[cur->idx], cur->command_key, cur->data);
 
 	if (pending) {
 		*tail = event_multi_flagged;
@@ -112,10 +113,10 @@ void cwmp_state_get_events(struct blob_buf *buf, bool pending)
 	}
 
 	for (cur = *tail; cur; cur = cur->next)
-		event_add(buf, event_multi_codes[cur->idx], cur->data);
+		event_add(buf, event_multi_codes[cur->idx], cur->command_key, cur->data);
 }
 
-void cwmp_flag_event(const char *id, const char *command_key)
+void cwmp_flag_event(const char *id, const char *command_key, struct blob_attr *data)
 {
 	struct event_multi *ev;
 	int i;
@@ -131,15 +132,20 @@ void cwmp_flag_event(const char *id, const char *command_key)
 	}
 
 	for (i = 0; i < __EVENT_M_MAX; i++) {
+		struct blob_attr *extra;
+
 		if (strcmp(id, event_multi_codes[i]) != 0)
 			continue;
 
 		if (!command_key)
 			command_key = "";
 
-		ev = calloc(1, sizeof(*ev) + strlen(id) + 1);
+		ev = calloc_a(sizeof(*ev) + strlen(id) + 1,
+			&extra, data ? blob_pad_len(data) : 0);
 		ev->idx = i;
-		strcpy(ev->data, command_key);
+		if (data)
+			ev->data = memcpy(extra, data, blob_pad_len(data));
+		strcpy(ev->command_key, command_key);
 
 		ev->next = event_multi_flagged;
 		event_multi_flagged = ev;
@@ -155,15 +161,16 @@ out:
 
 void cwmp_add_events(struct blob_attr *attr)
 {
-	static const struct blobmsg_policy ev_attr[2] = {
+	static const struct blobmsg_policy ev_attr[3] = {
 		{ .type = BLOBMSG_TYPE_STRING },
 		{ .type = BLOBMSG_TYPE_STRING },
+		{ .type = BLOBMSG_TYPE_TABLE },
 	};
 	struct blob_attr *cur;
 	int rem;
 
 	blobmsg_for_each_attr(cur, attr, rem) {
-		struct blob_attr *tb[2];
+		struct blob_attr *tb[3];
 
 		blobmsg_parse_array(ev_attr, ARRAY_SIZE(ev_attr), tb,
 				    blobmsg_data(cur), blobmsg_data_len(cur));
@@ -172,7 +179,8 @@ void cwmp_add_events(struct blob_attr *attr)
 			continue;
 
 		cwmp_flag_event(blobmsg_data(tb[0]),
-				tb[1] ? blobmsg_data(tb[1]) : NULL);
+				tb[1] ? blobmsg_data(tb[1]) : NULL,
+				tb[2]);
 	}
 
 }

@@ -109,7 +109,7 @@ cwmp_connection_request(struct ubus_context *ctx, struct ubus_object *obj,
 	blobmsg_add_u8(&b, "ok", ok);
 
 	if (ok)
-		cwmp_flag_event("6 CONNECTION REQUEST", NULL);
+		cwmp_flag_event("6 CONNECTION REQUEST", NULL, NULL);
 
 	ubus_send_reply(ctx, req, b.head);
 
@@ -128,6 +128,7 @@ cwmp_event_sent(struct ubus_context *ctx, struct ubus_object *obj,
 static const struct blobmsg_policy event_policy[] = {
 	{ .name = "event", .type = BLOBMSG_TYPE_STRING },
 	{ .name = "commandkey", .type = BLOBMSG_TYPE_STRING },
+	{ .name = "data", .type = BLOBMSG_TYPE_TABLE },
 };
 
 static int
@@ -135,10 +136,10 @@ cwmp_event_add(struct ubus_context *ctx, struct ubus_object *obj,
 	       struct ubus_request_data *req, const char *method,
 	       struct blob_attr *msg)
 {
-	struct blob_attr *tb[2];
+	struct blob_attr *tb[3];
 	const char *id, *ckey = NULL;
 
-	blobmsg_parse(event_policy, 2, tb, blob_data(msg), blob_len(msg));
+	blobmsg_parse(event_policy, ARRAY_SIZE(event_policy), tb, blob_data(msg), blob_len(msg));
 	if (!tb[0])
 		return UBUS_STATUS_INVALID_ARGUMENT;
 
@@ -146,7 +147,7 @@ cwmp_event_add(struct ubus_context *ctx, struct ubus_object *obj,
 	if (tb[1])
 		ckey = blobmsg_data(tb[1]);
 
-	cwmp_flag_event(id, ckey);
+	cwmp_flag_event(id, ckey, tb[2]);
 	return 0;
 }
 

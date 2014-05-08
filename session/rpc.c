@@ -26,6 +26,14 @@
 
 struct blob_buf events = {};
 
+static LIST_HEAD(event_msgs);
+
+struct event_rpc {
+	struct list_head list;
+	const char *command_key;
+	struct blob_attr *data;
+};
+
 static node_t *cwmp_open_array(node_t *node, const char *name)
 {
 	return roxml_add_node(node, 0, ROXML_ELM_NODE, (char *) name, NULL);
@@ -539,25 +547,35 @@ static void cwmp_add_inform_parameters(node_t *node)
 	cwmp_close_array(node, n, "ParameterValueStruct");
 }
 
-static int cwmp_add_event(node_t *node, const char *code, const char *key)
+static int
+cwmp_add_event(node_t *node, const char *code, const char *key,
+	       struct blob_attr *data)
 {
 	struct xml_kv ev_kv[2] = {
 		{ "EventCode", code },
 		{ "CommandKey", key },
 	};
+	struct event_rpc *rpc;
 
 	node = roxml_add_node(node, 0, ROXML_ELM_NODE, "EventStruct", NULL);
 	xml_add_multi(node, ROXML_ELM_NODE, ARRAY_SIZE(ev_kv), ev_kv, NULL);
+	if (data) {
+		rpc = calloc(1, sizeof(*rpc));
+		rpc->data = data;
+		rpc->command_key = key;
+		list_add(&rpc->list, &event_msgs);
+	}
 	return 1;
 }
 
 static int cwmp_add_event_blob(node_t *node, struct blob_attr *ev)
 {
-	static const struct blobmsg_policy ev_policy[2] = {
+	static const struct blobmsg_policy ev_policy[3] = {
 		{ .type = BLOBMSG_TYPE_STRING },
 		{ .type = BLOBMSG_TYPE_STRING },
+		{ .type = BLOBMSG_TYPE_TABLE },
 	};
-	struct blob_attr *ev_attr[2];
+	struct blob_attr *ev_attr[3];
 	const char *val = "";
 
 	if (blobmsg_type(ev) != BLOBMSG_TYPE_ARRAY)
@@ -571,7 +589,7 @@ static int cwmp_add_event_blob(node_t *node, struct blob_attr *ev)
 	if (ev_attr[1])
 		val = blobmsg_data(ev_attr[1]);
 
-	return cwmp_add_event(node, blobmsg_data(ev_attr[0]), val);
+	return cwmp_add_event(node, blobmsg_data(ev_attr[0]), val, ev_attr[2]);
 }
 
 static void cwmp_add_inform_events(node_t *node, bool changed)
@@ -591,7 +609,7 @@ static void cwmp_add_inform_events(node_t *node, bool changed)
 	}
 
 	if (changed)
-		n += cwmp_add_event(node, "4 VALUE CHANGED", "");
+		n += cwmp_add_event(node, "4 VALUE CHANGED", "", NULL);
 
 	cwmp_close_array(node, n, "EventStruct");
 }
@@ -615,8 +633,60 @@ int cwmp_session_init(struct rpc_data *data)
 	return 0;
 }
 
+static bool cwmp_add_event_msg(struct rpc_data *data, struct event_rpc *rpc)
+{
+	enum {
+		EVMSG_TYPE,
+		EVMSG_ERROR,
+		__EVMSG_MAX
+	};
+	static const struct blobmsg_policy policy[__EVMSG_MAX] = {
+		[EVMSG_TYPE] = { "type", BLOBMSG_TYPE_STRING },
+		[EVMSG_ERROR] = { "error", BLOBMSG_TYPE_INT32 },
+	};
+	struct blob_attr *tb[__EVMSG_MAX];
+	const char *type;
+	int error = 0;
+	node_t *node;
+
+	blobmsg_parse(policy, __EVMSG_MAX, tb, blobmsg_data(rpc->data), blobmsg_data_len(rpc->data));
+
+	if (!tb[EVMSG_TYPE])
+		return false;
+
+	type = blobmsg_data(tb[EVMSG_TYPE]);
+	if (tb[EVMSG_ERROR])
+		error = blobmsg_get_u32(tb[EVMSG_ERROR]);
+
+	if (!strcmp(type, "TransferComplete")) {
+		node = roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:TransferComplete", NULL);
+		soap_add_fault_struct(node, error);
+		soap_add_time(node, "StartTime", NULL);
+		soap_add_time(node, "CompleteTime", NULL);
+	} else {
+		return false;
+	}
+
+	roxml_add_node(node, 0, ROXML_ELM_NODE, "CommandKey", (char *) rpc->command_key);
+
+	return true;
+}
+
 void cwmp_session_continue(struct rpc_data *data)
 {
+	struct event_rpc *rpc, *tmp;
+
+	list_for_each_entry_safe(rpc, tmp, &event_msgs, list) {
+		bool ret;
+
+		ret = cwmp_add_event_msg(data, rpc);
+		list_del(&rpc->list);
+		free(rpc);
+
+		if (ret)
+			return;
+	}
+
 	if (data->empty_message) {
 		cwmp_notify_completed();
 		uloop_end();
