@@ -669,6 +669,7 @@ static bool cwmp_add_event_msg(struct rpc_data *data, struct event_rpc *rpc)
 	}
 
 	roxml_add_node(node, 0, ROXML_ELM_NODE, "CommandKey", (char *) rpc->command_key);
+	data->response = SOAP_RESPONSE_DATA;
 
 	return true;
 }
