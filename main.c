@@ -352,14 +352,25 @@ static int usage(const char *prog)
 	return 1;
 }
 
+static void cwmp_add_downloads(struct blob_attr *attr)
+{
+	struct blob_attr *cur;
+	int rem;
+
+	blobmsg_for_each_attr(cur, attr, rem)
+		cwmp_download_add(cur, true);
+}
+
 static void cwmp_load_cache(const char *filename)
 {
 	enum {
 		CACHE_EVENTS,
+		CACHE_DOWNLOADS,
 		__CACHE_MAX,
 	};
 	static const struct blobmsg_policy policy[__CACHE_MAX] = {
 		[CACHE_EVENTS] = { "events", BLOBMSG_TYPE_ARRAY },
+		[CACHE_DOWNLOADS] = { "downloads", BLOBMSG_TYPE_ARRAY },
 	};
 	struct blob_attr *tb[__CACHE_MAX];
 	struct stat st;
@@ -374,6 +385,9 @@ static void cwmp_load_cache(const char *filename)
 
 	if (tb[CACHE_EVENTS])
 		cwmp_add_events(tb[CACHE_EVENTS]);
+
+	if (tb[CACHE_DOWNLOADS])
+		cwmp_add_downloads(tb[CACHE_DOWNLOADS]);
 }
 
 int main(int argc, char **argv)
