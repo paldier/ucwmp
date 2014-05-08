@@ -128,6 +128,9 @@ void soap_add_fault_struct(node_t *node, unsigned int code)
 	if (code > 9000 && code - 9000 < ARRAY_SIZE(fault_msg))
 		fault[1].value = fault_msg[code - 9000];
 
+	if (!code)
+		fault[1].value = "";
+
 	snprintf(buf, sizeof(buf), "%d", code);
 	xml_add_multi(node, ROXML_ELM_NODE, ARRAY_SIZE(fault), fault, NULL);
 }
