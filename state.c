@@ -54,6 +54,9 @@ static void event_add(struct blob_buf *buf, const char *id, const char *key, str
 	blobmsg_add_string(buf, NULL, id);
 	if (key && *key)
 		blobmsg_add_string(buf, NULL, key);
+	if (data)
+		blobmsg_add_field(buf, BLOBMSG_TYPE_TABLE, "data",
+				  blobmsg_data(data), blobmsg_data_len(data));
 	blobmsg_close_array(buf, e);
 }
 
