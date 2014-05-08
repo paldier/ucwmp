@@ -11,16 +11,19 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
+#include <libubox/uloop.h>
 #include "state.h"
 
 static LIST_HEAD(downloads);
 
 enum download_state {
 	DL_STATE_NEW,
+	DL_STATE_READY,
 };
 
 struct cwmp_download {
 	struct list_head list;
+	struct uloop_timeout timeout;
 
 	const char *ckey;
 	const char *type;
@@ -87,4 +90,47 @@ void cwmp_download_add(struct blob_attr *attr, bool internal)
 
 error:
 	free(dl);
+}
+
+static void cwmp_download_delete(struct cwmp_download *dl)
+{
+	uloop_timeout_cancel(&dl->timeout);
+	list_del(&dl->list);
+	free(dl);
+}
+
+static void cwmp_download_ready(struct cwmp_download *dl)
+{
+	uloop_timeout_cancel(&dl->timeout);
+	/* start */
+}
+
+static void cwmp_download_timer(struct uloop_timeout *timeout)
+{
+	cwmp_download_check_pending();
+}
+
+void cwmp_download_check_pending(void)
+{
+	struct cwmp_download *dl, *tmp;
+	struct timeval tv;
+
+	gettimeofday(&tv, NULL);
+
+	list_for_each_entry_safe(dl, tmp, &downloads, list) {
+		int64_t offset = (int64_t) tv.tv_sec - (int64_t) dl->start;
+
+		if (offset < 0) {
+			dl->timeout.cb = cwmp_download_timer;
+			uloop_timeout_set(&dl->timeout, -(offset + 1) * 1000);
+			continue;
+		}
+
+		if (offset > 3600) {
+			cwmp_download_delete(dl);
+			continue;
+		}
+
+		cwmp_download_ready(dl);
+	}
 }

@@ -90,6 +90,7 @@ void cwmp_events_changed(bool add);
 void cwmp_clear_pending_events(void);
 
 void cwmp_download_add(struct blob_attr *data, bool internal);
+void cwmp_download_check_pending(void);
 
 int cwmp_update_config(enum cwmp_config_change changed);
 void cwmp_commit_config(void);
