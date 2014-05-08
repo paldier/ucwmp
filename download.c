@@ -225,6 +225,8 @@ static void cwmp_download_apply_cb(struct uloop_process *p, int ret)
 static void cwmp_download_apply(struct cwmp_download *dl)
 {
 	dl->state = DL_STATE_APPLY;
+	cwmp_save_cache(true);
+
 	dl_proc.cb = cwmp_download_apply_cb;
 
 	dl_proc.pid = fork();
