@@ -41,6 +41,8 @@ start_service() {
 
 	[ -n "$start" ] || return
 
+	ubus -t 30 wait_for acs.system
+
 	procd_open_instance cwmpd
 	procd_set_param command /usr/sbin/cwmpd
 	procd_set_param respawn
