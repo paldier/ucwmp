@@ -272,14 +272,13 @@ static void __constructor server_init(void)
 	cwmp_backend_init(ubus_ctx);
 }
 
-void cwmp_notify_completed(void)
+int cwmp_invoke(const char *cmd, struct blob_attr *data)
 {
-	blob_buf_init(&b, 0);
-	ubus_invoke(ubus_ctx, cwmp_id, "session_completed", b.head, NULL, NULL, 0);
+	return ubus_invoke(ubus_ctx, cwmp_id, cmd, b.head, NULL, NULL, 0);
 }
 
-int cwmp_notify_download(struct blob_attr *data)
+int cwmp_invoke_noarg(const char *cmd)
 {
-	ubus_invoke(ubus_ctx, cwmp_id, "download_add", data, NULL, NULL, 0);
-	return 0;
+	blob_buf_init(&b, 0);
+	return cwmp_invoke(cmd, b.head);
 }

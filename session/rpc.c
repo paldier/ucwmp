@@ -374,12 +374,14 @@ static int cwmp_handle_delete_object(struct rpc_data *data)
 
 static int cwmp_handle_factory_reset(struct rpc_data *data)
 {
+	cwmp_invoke_noarg("factory_reset");
 	roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:FactoryResetResponse", NULL);
 	return 0;
 }
 
 static int cwmp_handle_reboot(struct rpc_data *data)
 {
+	cwmp_invoke_noarg("reboot");
 	roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:RebootResponse", NULL);
 	return 0;
 }
@@ -425,7 +427,7 @@ static int cwmp_handle_download(struct rpc_data *data)
 	gettimeofday(&tv, NULL);
 	blobmsg_add_u32(&b, "start", tv.tv_sec + delay);
 
-	ret = cwmp_notify_download(b.head);
+	ret = cwmp_invoke("download_add", b.head);
 	blob_buf_free(&b);
 
 	if (ret)
@@ -690,7 +692,7 @@ void cwmp_session_continue(struct rpc_data *data)
 	}
 
 	if (data->empty_message) {
-		cwmp_notify_completed();
+		cwmp_invoke_noarg("session_completed");
 		uloop_end();
 		return;
 	}

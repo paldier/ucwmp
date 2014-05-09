@@ -304,6 +304,24 @@ cwmp_download_done_req(struct ubus_context *ctx, struct ubus_object *obj,
 	return 0;
 }
 
+static int
+cwmp_factory_reset(struct ubus_context *ctx, struct ubus_object *obj,
+		   struct ubus_request_data *req, const char *method,
+		   struct blob_attr *msg)
+{
+	pending_cmd = CMD_FACTORY_RESET;
+	return 0;
+}
+
+static int
+cwmp_reboot(struct ubus_context *ctx, struct ubus_object *obj,
+	    struct ubus_request_data *req, const char *method,
+	    struct blob_attr *msg)
+{
+	pending_cmd = CMD_REBOOT;
+	return 0;
+}
+
 static struct ubus_method cwmp_methods[] = {
 	UBUS_METHOD_NOARG("server_info_get", cwmp_server_info_get),
 	UBUS_METHOD("server_info_set", cwmp_server_info_set, info_policy),
@@ -315,6 +333,9 @@ static struct ubus_method cwmp_methods[] = {
 	UBUS_METHOD("download_add", cwmp_download_req, transfer_policy),
 	UBUS_METHOD_MASK("download_done", cwmp_download_done_req, transfer_policy,
 			 (1 << CWMP_DL_URL)),
+
+	UBUS_METHOD_NOARG("factory_reset", cwmp_factory_reset),
+	UBUS_METHOD_NOARG("reboot", cwmp_reboot),
 
 	UBUS_METHOD_NOARG("session_completed", cwmp_session_completed),
 };

@@ -68,6 +68,14 @@ struct cwmp_config {
 	const char *local_password;
 };
 
+enum pending_cmd {
+	CMD_NONE,
+	CMD_FACTORY_RESET,
+	CMD_REBOOT,
+};
+
+extern enum pending_cmd pending_cmd;
+
 enum cwmp_dl {
 	CWMP_DL_CKEY,
 	CWMP_DL_TYPE,

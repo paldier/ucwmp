@@ -54,6 +54,7 @@ static bool session_pending;
 static int debug_level;
 
 struct cwmp_config config;
+enum pending_cmd pending_cmd = CMD_NONE;
 
 static struct blob_buf b;
 
@@ -191,8 +192,27 @@ static void cwmp_run_session(void)
 	free(ev);
 }
 
+static void cwmp_process_pending_cmd(void)
+{
+	char *argv[] = { NULL, NULL };
+
+	switch (pending_cmd) {
+	case CMD_FACTORY_RESET:
+		argv[0] = CWMP_SCRIPT_DIR "/factory-reset.sh";
+		break;
+	case CMD_REBOOT:
+		argv[0] = CWMP_SCRIPT_DIR "/reboot.sh";
+		break;
+	default:
+		return;
+	}
+
+	execvp(argv[0], argv);
+}
+
 static void session_cb(struct uloop_process *c, int ret)
 {
+	cwmp_process_pending_cmd();
 	cwmp_download_check_pending(true);
 
 	if (debug_level)
