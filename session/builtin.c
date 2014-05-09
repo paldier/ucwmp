@@ -274,7 +274,7 @@ static void __constructor server_init(void)
 
 int cwmp_invoke(const char *cmd, struct blob_attr *data)
 {
-	return ubus_invoke(ubus_ctx, cwmp_id, cmd, b.head, NULL, NULL, 0);
+	return ubus_invoke(ubus_ctx, cwmp_id, cmd, data, NULL, NULL, 0);
 }
 
 int cwmp_invoke_noarg(const char *cmd)
