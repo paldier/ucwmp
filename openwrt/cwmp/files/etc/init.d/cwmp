@@ -1,0 +1,58 @@
+#!/bin/sh /etc/rc.common
+START=90
+USE_PROCD=1
+
+prepare_config() {
+	local cfg="$1"
+
+	. /etc/openwrt_release
+
+	json_init
+	json_add_string SoftwareVersion "$DISTRIB_CODENAME/$DISTRIB_REVISION"
+	for field in Manufacturer ManufacturerOUI ModelName Description ProductClass SerialNumber HardwareVersion; do
+		config_get val "$cfg" "$field"
+		[ -n "$val" ] || {
+			case "$field" in
+				Manufacturer) val="OpenWrt";;
+				Description|ModelName) val="$DISTRIB_TARGET";;
+				SerialNumber) val="$(cat /sys/class/net/eth0/address)";;
+				ManufacturerOUI) val="$(cat /sys/class/net/eth0/address)"; val="${val%:*:*:*}";;
+				HardwareVersion) val="v0";;
+			esac
+		}
+		json_add_string "$field" "$val"
+	done
+	json_dump > /tmp/cwmp-device.json
+
+	if cmp -s /tmp/cwmp-device.json /etc/cwmp-device.json; then
+		rm -f /tmp/cwmp-device.json
+	else
+		mv /tmp/cwmp-device.json /etc/cwmp-device.json
+	fi
+
+	config_get url "$cfg" url
+	config_get connection_port "$cfg" connection_port
+	[ -n "$url" ] && start=1
+}
+
+start_service() {
+	config_load cwmp
+	config_foreach prepare_config cwmp
+
+	[ -n "$start" ] || return
+
+	procd_open_instance cwmpd
+	procd_set_param command /usr/sbin/cwmpd
+	procd_set_param respawn
+	procd_close_instance
+
+	procd_open_instance cwmp-uhttpd
+	procd_set_param command /usr/sbin/uhttpd -f -p ${connection_port:-8080} -x / -h /usr/libexec/cwmp
+	procd_set_param respawn
+	procd_close_instance
+}
+
+service_triggers()
+{
+	procd_add_reload_trigger "cwmp"
+}
