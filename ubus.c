@@ -106,7 +106,7 @@ cwmp_connection_request(struct ubus_context *ctx, struct ubus_object *obj,
 
 	blob_buf_init(&b, 0);
 
-	blobmsg_parse(conn_req_policy, __CONN_REQ_MAX, tb, blob_data(msg), blob_len(msg));
+	blobmsg_parse(conn_req_policy, __CONN_REQ_MAX, tb, blobmsg_data(msg), blobmsg_data_len(msg));
 
 	ok = conn_req_validate(tb);
 	conn_req_challenge();
@@ -143,7 +143,7 @@ cwmp_event_add(struct ubus_context *ctx, struct ubus_object *obj,
 	struct blob_attr *tb[3];
 	const char *id, *ckey = NULL;
 
-	blobmsg_parse(event_policy, ARRAY_SIZE(event_policy), tb, blob_data(msg), blob_len(msg));
+	blobmsg_parse(event_policy, ARRAY_SIZE(event_policy), tb, blobmsg_data(msg), blobmsg_data_len(msg));
 	if (!tb[0])
 		return UBUS_STATUS_INVALID_ARGUMENT;
 
@@ -257,7 +257,7 @@ cwmp_server_info_set(struct ubus_context *ctx, struct ubus_object *obj,
 	struct blob_attr *tb[__SERVER_INFO_MAX];
 	bool changed = false;
 
-	blobmsg_parse(info_policy, __SERVER_INFO_MAX, tb, blob_data(msg), blob_len(msg));
+	blobmsg_parse(info_policy, __SERVER_INFO_MAX, tb, blobmsg_data(msg), blobmsg_data_len(msg));
 
 	if (tb[SERVER_INFO_URL])
 		changed |= cwmp_server_info_set_url(tb);
@@ -349,6 +349,25 @@ static struct ubus_object cwmp_object = {
 	.methods = cwmp_methods,
 	.n_methods = ARRAY_SIZE(cwmp_methods),
 };
+
+void cwmp_ubus_command(struct blob_attr *data)
+{
+	struct blobmsg_policy policy[2] = {
+		{ .type = BLOBMSG_TYPE_STRING },
+		{ .type = BLOBMSG_TYPE_TABLE },
+	};
+	struct blob_attr *tb[2];
+	const char *name;
+
+	blobmsg_parse_array(policy, ARRAY_SIZE(policy), tb, blobmsg_data(data), blobmsg_data_len(data));
+	if (!tb[0] || !tb[1])
+		return;
+
+	name = blobmsg_data(tb[0]);
+
+	if (!strcmp(name, "download_done"))
+		cwmp_download_done_req(ctx, &cwmp_object, NULL, NULL, tb[1]);
+}
 
 int cwmp_ubus_register(void)
 {

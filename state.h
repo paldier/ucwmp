@@ -111,5 +111,7 @@ int cwmp_update_config(enum cwmp_config_change changed);
 void cwmp_commit_config(void);
 
 int cwmp_ubus_register(void);
+void cwmp_ubus_command(struct blob_attr *data);
+
 
 #endif

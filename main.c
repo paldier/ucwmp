@@ -42,6 +42,7 @@
 
 #define CWMP_INFO_FILE	CWMP_ETC_DIR "/cwmp-device.json"
 #define CWMP_CACHE_FILE	CWMP_ETC_DIR "/cwmp-cache.json"
+#define CWMP_STARTUP_FILE	CWMP_ETC_DIR "/cwmp-startup.json"
 
 static struct uci_context *uci_ctx;
 static const char *session_path = CWMP_SESSION_BIN;
@@ -452,6 +453,33 @@ static void cwmp_load_cache(const char *filename)
 		cwmp_add_downloads(tb[CACHE_DOWNLOADS]);
 }
 
+static void cwmp_load_startup(const char *filename)
+{
+	static const struct blobmsg_policy policy = {
+		"commands", BLOBMSG_TYPE_ARRAY
+	};
+	struct blob_attr *attr, *cur;
+	struct stat st;
+	int rem;
+
+	if (stat(filename, &st) != 0)
+		return;
+
+	blob_buf_init(&b, 0);
+	blobmsg_add_json_from_file(&b, filename);
+	truncate(filename, 0);
+
+	blobmsg_parse(&policy, 1, &attr, blob_data(b.head), blob_len(b.head));
+	if (!attr)
+		return;
+
+	if (!blobmsg_check_attr_list(attr, BLOBMSG_TYPE_ARRAY))
+		return;
+
+	blobmsg_for_each_attr(cur, attr, rem)
+		cwmp_ubus_command(cur);
+}
+
 int main(int argc, char **argv)
 {
 	int ch;
@@ -493,6 +521,9 @@ int main(int argc, char **argv)
 	}
 
 	cwmp_load_cache(cache_file);
+	cwmp_download_check_pending(true);
+	cwmp_load_startup(CWMP_STARTUP_FILE);
+
 	uloop_timeout_cancel(&save_cache);
 	cwmp_schedule_session();
 	cwmp_update_session_timer();

@@ -27,6 +27,7 @@ endef
 define Package/ucwmp/conffiles
 /etc/config/cwmp
 /etc/cwmp-cache.json
+/etc/cwmp-startup.json
 endef
 
 define Build/Prepare

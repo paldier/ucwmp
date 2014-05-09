@@ -11,3 +11,4 @@ install_manifest.txt
 /cwmpd
 connreq
 /etc/cwmp-cache.json
+/etc/cwmp-startup.json
