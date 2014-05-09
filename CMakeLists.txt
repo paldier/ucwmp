@@ -29,7 +29,10 @@ TARGET_LINK_LIBRARIES(cwmp-session ubus uclient ubox roxml blobmsg_json ${json} 
 TARGET_LINK_LIBRARIES(cwmpd uci uclient ubus ubox blobmsg_json ${json})
 TARGET_LINK_LIBRARIES(connreq ubus ubox)
 
-INSTALL(TARGETS cwmp-session
+INSTALL(TARGETS cwmp-session cwmpd
 	RUNTIME DESTINATION bin
 	LIBRARY DESTINATION lib
+)
+INSTALL(TARGETS connreq
+	RUNTIME DESTINATION libexec/cwmp
 )
