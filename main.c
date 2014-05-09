@@ -194,20 +194,20 @@ static void cwmp_run_session(void)
 
 static void cwmp_process_pending_cmd(void)
 {
-	char *argv[] = { NULL, NULL };
+	const char *cmd;
 
 	switch (pending_cmd) {
 	case CMD_FACTORY_RESET:
-		argv[0] = CWMP_SCRIPT_DIR "/factory-reset.sh";
+		cmd = CWMP_SCRIPT_DIR "/factory-reset.sh";
 		break;
 	case CMD_REBOOT:
-		argv[0] = CWMP_SCRIPT_DIR "/reboot.sh";
+		cmd = CWMP_SCRIPT_DIR "/reboot.sh";
 		break;
 	default:
 		return;
 	}
 
-	execvp(argv[0], argv);
+	system(cmd);
 }
 
 static void session_cb(struct uloop_process *c, int ret)
