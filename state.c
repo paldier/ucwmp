@@ -78,6 +78,12 @@ void cwmp_clear_pending_events(void)
 	cwmp_save_cache(false);
 }
 
+bool cwmp_state_has_events(void)
+{
+	return (event_pending || event_flagged ||
+		event_multi_pending || event_multi_flagged);
+}
+
 void cwmp_state_get_events(struct blob_buf *buf, bool pending)
 {
 	struct event_multi **tail = &event_multi_pending;

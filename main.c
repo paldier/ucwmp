@@ -219,16 +219,29 @@ static void session_cb(struct uloop_process *c, int ret)
 		fprintf(stderr, "Session completed (success: %d)\n", session_success);
 
 	if (session_pending)
-		cwmp_run_session();
+		cwmp_schedule_session();
 }
 
-void cwmp_schedule_session(void)
+static void __cwmp_run_session(struct uloop_timeout *timeout)
 {
 	if (session_proc.pending) {
 		session_pending = true;
 		return;
 	}
+
+	if (!cwmp_state_has_events())
+		return;
+
 	cwmp_run_session();
+}
+
+void cwmp_schedule_session(void)
+{
+	static struct uloop_timeout timer = {
+		.cb = __cwmp_run_session,
+	};
+
+	uloop_timeout_set(&timer, 1);
 }
 
 static void cwmp_update_session_timer(void);

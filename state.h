@@ -96,6 +96,7 @@ void cwmp_add_events(struct blob_attr *attr);
 void cwmp_state_get_events(struct blob_buf *buf, bool pending);
 void cwmp_state_get_downloads(struct blob_buf *buf);
 void cwmp_flag_event(const char *id, const char *command_key, struct blob_attr *data);
+bool cwmp_state_has_events(void);
 void cwmp_clear_pending_events(void);
 
 void cwmp_schedule_session(void);
