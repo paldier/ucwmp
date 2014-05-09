@@ -30,7 +30,7 @@ TARGET_LINK_LIBRARIES(cwmpd uci uclient ubus ubox blobmsg_json ${json})
 TARGET_LINK_LIBRARIES(connreq ubus ubox)
 
 INSTALL(TARGETS cwmp-session cwmpd
-	RUNTIME DESTINATION bin
+	RUNTIME DESTINATION sbin
 	LIBRARY DESTINATION lib
 )
 INSTALL(TARGETS connreq
