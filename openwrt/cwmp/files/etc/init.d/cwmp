@@ -2,6 +2,21 @@
 START=90
 USE_PROCD=1
 
+validate_cwmp_section()
+{
+	uci_validate_section cwmp cwmp "${1}" \
+		'enabled:bool:0' \
+		'url:string' \
+		'username:string' \
+		'password:string' \
+		'local_username:string' \
+		'local_password:string' \
+		'periodic_enabled:bool:1' \
+		'periodic_interval:range(30, 10000)' \
+		'connection_port:port'
+	return $?
+}
+
 prepare_config() {
 	local cfg="$1"
 
@@ -57,4 +72,5 @@ start_service() {
 service_triggers()
 {
 	procd_add_reload_trigger "cwmp"
+	procd_add_validation validate_cwmp_section
 }
