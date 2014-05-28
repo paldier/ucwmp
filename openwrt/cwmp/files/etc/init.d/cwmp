@@ -19,6 +19,10 @@ validate_cwmp_section()
 
 prepare_config() {
 	local cfg="$1"
+	
+	config_get enabled "$cfg" enabled
+
+	[ "$enabled" = 1 ] || return
 
 	. /etc/openwrt_release
 
