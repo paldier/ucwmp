@@ -192,7 +192,7 @@ static void cwmp_data_read(struct uclient *cl)
 
 static void cwmp_data_eof(struct uclient *cl)
 {
-	static int retries;
+	static int retries, auth_retries;
 	char *msg = buf;
 
 	buf[buf_ofs] = 0;
@@ -207,12 +207,21 @@ static void cwmp_data_eof(struct uclient *cl)
 	case 204:
 		msg = NULL;
 	case 200:
+		auth_retries = 0;
 		cwmp_process_cookies(cl);
 		cwmp_free_request();
 		cwmp_dump_message("Received ACS data", buf);
 		cur_request = soap_handle_msg(msg);
 		cwmp_send_request();
 		break;
+	case 401:
+		if (auth_retries++ < 2) {
+			if (debug_level)
+				fprintf(stderr, "Retry after authenticating\n");
+			cwmp_send_request();
+			break;
+		}
+		/* fall through */
 	default:
 		fprintf(stderr, "Got HTTP error %d\n", cl->status_code);
 		uloop_end();
