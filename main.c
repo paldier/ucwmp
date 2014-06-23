@@ -235,6 +235,9 @@ static void __cwmp_run_session(struct uloop_timeout *timeout)
 	if (!cwmp_state_has_events())
 		return;
 
+	if (!config.acs_info[0])
+		return;
+
 	cwmp_run_session();
 }
 
