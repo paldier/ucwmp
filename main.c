@@ -290,7 +290,7 @@ static int cwmp_get_config_section(struct uci_ptr *ptr)
 	return 0;
 }
 
-static int cwmp_load_config(void)
+int cwmp_load_config(void)
 {
 	struct uci_option *tb[__SERVER_INFO_MAX], *cur;
 	struct uci_ptr ptr = {};

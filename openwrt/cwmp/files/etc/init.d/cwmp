@@ -73,6 +73,12 @@ start_service() {
 	procd_close_instance
 }
 
+reload() {
+	reload_service "$@"
+
+	ubus -S call cwmpd reload
+}
+
 service_triggers()
 {
 	procd_add_reload_trigger "cwmp"

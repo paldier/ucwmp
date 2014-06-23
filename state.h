@@ -101,6 +101,7 @@ void cwmp_clear_pending_events(void);
 
 void cwmp_schedule_session(void);
 void cwmp_save_cache(bool immediate);
+int cwmp_load_config(void);
 
 void cwmp_download_add(struct blob_attr *data, bool internal);
 void cwmp_download_check_pending(bool session_complete);
