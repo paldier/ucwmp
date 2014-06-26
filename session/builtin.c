@@ -126,6 +126,7 @@ static int server_commit(struct cwmp_object *obj)
 	for (i = 0; i < ARRAY_SIZE(server_params); i++) {
 		const char *name = server_policy[i].name;
 		const char *value = server_values[i];
+		bool bval;
 
 		if (!value)
 			continue;
@@ -138,7 +139,14 @@ static int server_commit(struct cwmp_object *obj)
 			blobmsg_add_u32(&b, name, atoi(value));
 			break;
 		case BLOBMSG_TYPE_INT8:
-			blobmsg_add_u8(&b, name, !!atoi(value));
+			if (!strcasecmp(value, "true") || !strcmp(value, "1"))
+				bval = true;
+			else if (!strcasecmp(value, "false") || !strcmp(value, "0"))
+				bval = false;
+			else
+				break;
+
+			blobmsg_add_u8(&b, name, bval);
 			break;
 		default:
 			break;
