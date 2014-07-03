@@ -99,6 +99,12 @@ reload_service() {
 	ubus -S call cwmp reload
 }
 
+boot() {
+	start
+	ubus -t 10 wait_for cwmp
+	ubus -S call cwmp event_add '{ "event": "1 BOOT" }'
+}
+
 service_triggers()
 {
 	procd_add_reload_trigger "cwmp"
