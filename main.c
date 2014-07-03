@@ -306,10 +306,6 @@ int cwmp_load_config(void)
 		return -1;
 
 	uci_parse_section(ptr.s, server_opts, ARRAY_SIZE(server_opts), tb);
-	if (!tb[SERVER_INFO_URL]) {
-		fprintf(stderr, "ACS URL not found in config\n");
-		return -1;
-	}
 
 	for (i = 0; i <= SERVER_INFO_PASSWORD; i++) {
 		const char *val = tb[i] ? tb[i]->v.string : NULL;

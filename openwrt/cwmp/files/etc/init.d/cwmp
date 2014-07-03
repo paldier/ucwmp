@@ -21,7 +21,7 @@ validate_cwmp_section()
 prepare_config() {
 	local cfg="$1"
 	
-	config_get enabled "$cfg" enabled
+	config_get enabled "$cfg" enabled 1
 
 	[ "$enabled" = 1 ] || return
 
@@ -52,7 +52,7 @@ prepare_config() {
 
 	config_get url "$cfg" url
 	config_get connection_port "$cfg" connection_port
-	[ -n "$url" ] && start=1
+	start=1
 }
 
 start_service() {
