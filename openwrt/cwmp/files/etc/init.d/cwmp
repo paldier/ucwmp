@@ -93,10 +93,10 @@ service_started() {
 	procd_set_config_changed firewall
 }
 
-reload() {
-	reload_service "$@"
-
-	ubus -S call cwmpd reload
+reload_service() {
+	start
+	ubus -t 10 wait_for cwmp
+	ubus -S call cwmp reload
 }
 
 service_triggers()
