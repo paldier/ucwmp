@@ -432,24 +432,29 @@ static void cwmp_load_cache(const char *filename)
 	struct stat st;
 
 	if (stat(filename, &st) != 0)
-		return;
+		goto bootstrap;
 
 	blob_buf_init(&b, 0);
-	blobmsg_add_json_from_file(&b, filename);
+	if (!blobmsg_add_json_from_file(&b, filename))
+		goto bootstrap;
 
 	blobmsg_parse(policy, __CACHE_MAX, tb, blob_data(b.head), blob_len(b.head));
-
-	if (config.acs_info[0]) {
-		cur = tb[CACHE_URL];
-		if (!cur || strcmp(config.acs_info[0], blobmsg_data(cur)) != 0)
-			cwmp_flag_event("0 BOOTSTRAP", NULL, NULL);
-	}
 
 	if (tb[CACHE_EVENTS])
 		cwmp_add_events(tb[CACHE_EVENTS]);
 
 	if (tb[CACHE_DOWNLOADS])
 		cwmp_add_downloads(tb[CACHE_DOWNLOADS]);
+
+	if (config.acs_info[0]) {
+		cur = tb[CACHE_URL];
+		if (!cur || strcmp(config.acs_info[0], blobmsg_data(cur)) != 0)
+			goto bootstrap;
+	}
+	return;
+
+bootstrap:
+	cwmp_flag_event("0 BOOTSTRAP", NULL, NULL);
 }
 
 static void cwmp_load_startup(const char *filename)
