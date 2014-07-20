@@ -175,42 +175,18 @@ static struct cwmp_object server_object = {
 	.commit = server_commit,
 };
 
-#define devinfo_main_fields(t, p) \
+#define devinfo_fields(t, p) \
 	_v(t, p, Manufacturer) \
 	_v(t, p, ManufacturerOUI) \
-	_v(t, p, ModelName) \
-	_v(t, p, Description) \
 	_v(t, p, ProductClass) \
 	_v(t, p, SerialNumber) \
-	_v(t, p, HardwareVersion) \
-	_v(t, p, SoftwareVersion) \
-	_v(t, p, ModemFirmwareVersion) \
-	_v(t, p, AdditionalHardwareVersion) \
-	_v(t, p, AdditionalSoftwareVersion) \
-
-#define devinfo_extra_fields(t, p) \
-	_v(t, p, SpecVersion)
-
-#define devinfo_fields(t, p) \
-	devinfo_main_fields(t, p) \
-	devinfo_extra_fields(t, p)
 
 enum devinfo_fields {
 	CWMP_ENUM(DEVINFO, devinfo_fields)
 	__DEVINFO_MAX
 };
 
-static const char *devinfo_param_names[__DEVINFO_MAX] = {
-	CWMP_PARAM_NAMES(DEVINFO, devinfo_fields)
-};
-
 static char *devinfo_values[__DEVINFO_MAX];
-
-static struct cwmp_object devinfo_object = {
-	.params = devinfo_param_names,
-	.values = devinfo_values,
-	.n_params = __DEVINFO_MAX,
-};
 
 void server_update_local_addr(const char *addr)
 {
@@ -225,13 +201,11 @@ void server_update_local_addr(const char *addr)
 void server_load_info(const char *filename)
 {
 	static const struct blobmsg_policy devinfo_policy[__DEVINFO_MAX] = {
-		CWMP_BLOBMSG_STRING(DEVINFO, devinfo_main_fields)
+		CWMP_BLOBMSG_STRING(DEVINFO, devinfo_fields)
 	};
 	struct blob_attr *tb[__DEVINFO_MAX];
 	static struct blob_buf b;
 	int i;
-
-	memset(devinfo_values, 0, sizeof(devinfo_values));
 
 	blob_buf_init(&b, 0);
 	blobmsg_add_json_from_file(&b, filename);
@@ -276,7 +250,6 @@ static void __constructor server_init(void)
 	server_load_values();
 
 	cwmp_object_add(&server_object, "ManagementServer", NULL);
-	cwmp_object_add(&devinfo_object, "DeviceInfo", NULL);
 	cwmp_backend_init(ubus_ctx);
 }
 
