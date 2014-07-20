@@ -43,18 +43,15 @@ void cwmp_backend_load_data(const char *path)
 static int backend_get_param(struct cwmp_object *c_obj, int param, const char **value)
 {
 	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
-	struct blobmsg_policy policy = { "value", BLOBMSG_TYPE_STRING };
 	struct blob_attr *attr;
-	struct blob_attr *val;
 
 	if (acs_param_get(&api, obj->params[param].mgmt, &attr))
 		return CWMP_ERROR_INTERNAL_ERROR;
 
-	blobmsg_parse(&policy, 1, &val, blobmsg_data(attr), blobmsg_data_len(attr));
-	if (val)
-		*value = blobmsg_data(val);
-	else
+	if (!attr || blobmsg_type(attr) != BLOBMSG_TYPE_STRING)
 		*value = "";
+	else
+		*value = blobmsg_data(attr);
 
 	return 0;
 }
