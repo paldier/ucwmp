@@ -18,6 +18,7 @@
 
 static struct acs_api api;
 static bool need_validate;
+static struct blob_buf vars;
 
 struct backend_param {
 	struct acs_object_param *mgmt;
@@ -29,8 +30,15 @@ struct backend_object {
 	struct backend_param *params;
 };
 
+void server_update_local_addr(const char *addr, const char *port)
+{
+	blobmsg_printf(&vars, "cwmp_local_addr", "%s:%s", addr, port);
+	acs_set_script_data(&api, vars.head);
+}
+
 void cwmp_backend_init(struct ubus_context *ubus_ctx)
 {
+	blob_buf_init(&vars, 0);
 	acs_api_init(&api);
 	acs_set_ubus_context(&api, ubus_ctx);
 }

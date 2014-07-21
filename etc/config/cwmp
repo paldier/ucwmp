@@ -5,7 +5,7 @@ config cwmp 'foo'
 	option connection_port '8080'
 	option local_username '_user'
 	option local_password '_password'
-	option periodic_interval '30'
-	option username admin
-	option password openacs
+	option username 'admin'
+	option password 'openacs'
+	option periodic_interval '20'
 

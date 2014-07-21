@@ -34,7 +34,7 @@ static int buf_len, buf_ofs;
 
 static char *cur_request;
 
-static char *url, *username, *password;
+static char *url, *username, *password, *local_port = "8080";
 
 static LIST_HEAD(cookies);
 struct blob_buf events;
@@ -267,10 +267,11 @@ static int usage(const char *progname)
 		"	-I <file>:      Load device info from <file>\n"
 		"	-e <json>:      Load events from JSON string\n"
 		"	-m <path>:      Load object definitions from directory <path>\n"
-		"	-a <file>:		Set attribute cache filename to <file>\n"
+		"	-a <file>:	Set attribute cache filename to <file>\n"
 		"	-d <level>:     Set debug level\n"
 		"	-u <username>:  Set ACS username\n"
 		"	-p <password>:  Set ACS password\n"
+		"	-P <port>:	Set local connection port\n"
 		"\n", progname);
 	return 1;
 }
@@ -305,7 +306,7 @@ int main(int argc, char **argv)
 
 	uloop_init();
 
-	while ((ch = getopt(argc, argv, "a:d:I:e:m:u:p:")) != -1) {
+	while ((ch = getopt(argc, argv, "a:d:I:e:m:u:p:P:")) != -1) {
 		switch (ch) {
 		case 'a':
 			attr_cache_file = optarg;
@@ -330,6 +331,9 @@ int main(int argc, char **argv)
 			password = strdup(optarg);
 			memset(optarg, 0, strlen(optarg));
 			break;
+		case 'P':
+			local_port = optarg;
+			break;
 		default:
 			return usage(progname);
 		}
@@ -348,7 +352,7 @@ int main(int argc, char **argv)
 	cwmp_connect();
 
 	uclient_get_addr(local_addr, NULL, &uc->local_addr);
-	server_update_local_addr(local_addr);
+	server_update_local_addr(local_addr, local_port);
 
 	cur_request = soap_init_session();
 	cwmp_send_request();

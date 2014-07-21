@@ -126,6 +126,7 @@ static struct uloop_process session_proc = {
 static void cwmp_exec_session(const char *event_data)
 {
 	static char debug_str[8] = "0";
+	static char port_str[8] = "8080";
 	const char *argv[16] = {
 		session_path,
 		"-d",
@@ -136,6 +137,8 @@ static void cwmp_exec_session(const char *event_data)
 		devinfo_path,
 		"-m",
 		CWMP_MODEL_DIR "/*.json",
+		"-P",
+		port_str,
 		NULL
 	};
 	int argc = 9;

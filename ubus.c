@@ -155,124 +155,6 @@ cwmp_event_add(struct ubus_context *ctx, struct ubus_object *obj,
 	return 0;
 }
 
-static const struct blobmsg_policy info_policy[__SERVER_INFO_MAX] = {
-	[SERVER_INFO_URL] = { .name = "url", .type = BLOBMSG_TYPE_STRING },
-	[SERVER_INFO_USERNAME] = { .name = "username", .type = BLOBMSG_TYPE_STRING },
-	[SERVER_INFO_PASSWORD] = { .name = "password", .type = BLOBMSG_TYPE_STRING },
-	[SERVER_INFO_PERIODIC_INTERVAL] = { .name = "periodic_interval", .type = BLOBMSG_TYPE_INT32 },
-	[SERVER_INFO_PERIODIC_ENABLED] = { .name = "periodic_enabled", .type = BLOBMSG_TYPE_BOOL },
-	[SERVER_INFO_LOCAL_USERNAME] = { .name = "local_username", .type = BLOBMSG_TYPE_STRING },
-	[SERVER_INFO_LOCAL_PASSWORD] = { .name = "local_password", .type = BLOBMSG_TYPE_STRING },
-};
-
-static int
-cwmp_server_info_get(struct ubus_context *ctx, struct ubus_object *obj,
-		     struct ubus_request_data *req, const char *method,
-		     struct blob_attr *msg)
-{
-	blob_buf_init(&b, 0);
-
-	if (config.acs_info[0])
-		blobmsg_add_string(&b, "url", config.acs_info[0]);
-	if (config.acs_info[1])
-		blobmsg_add_string(&b, "username", config.acs_info[1]);
-	if (config.acs_info[2])
-		blobmsg_add_string(&b, "password", config.acs_info[2]);
-
-	blobmsg_add_u8(&b, "periodic_enabled", config.periodic_enabled);
-	blobmsg_add_u32(&b, "periodic_interval", config.periodic_interval);
-	blobmsg_add_u32(&b, "connection_port", config.conn_req_port);
-
-	if (config.local_username)
-		blobmsg_add_string(&b, "local_username", config.local_username);
-
-	ubus_send_reply(ctx, req, b.head);
-
-	return 0;
-}
-
-static bool cwmp_server_info_set_url(struct blob_attr **tb)
-{
-	bool changed = false;
-	int i;
-
-	for (i = SERVER_INFO_URL; i <= SERVER_INFO_PASSWORD; i++) {
-		const char *old = config.acs_info[i - SERVER_INFO_URL];
-		const char *new = tb[i] ? blobmsg_data(tb[i]) : NULL;
-
-		config.acs_info[i - SERVER_INFO_URL] = new;
-
-		if (!!old != !!new)
-			changed = true;
-		else if (old && new && strcmp(old, new) != 0)
-			changed = true;
-	}
-
-	if (changed)
-		cwmp_update_config(CONFIG_CHANGE_ACS_INFO);
-
-	return changed;
-}
-
-
-static bool cwmp_server_info_set_periodic(struct blob_attr **tb)
-{
-	struct blob_attr *cur;
-
-	if ((cur = tb[SERVER_INFO_PERIODIC_INTERVAL]))
-		config.periodic_interval = blobmsg_get_u32(cur);
-
-	if ((cur = tb[SERVER_INFO_PERIODIC_ENABLED]))
-		config.periodic_enabled = blobmsg_get_bool(cur);
-
-	cwmp_update_config(CONFIG_CHANGE_PERIODIC_INFO);
-	return true;
-}
-
-static bool cwmp_server_info_set_local(struct blob_attr **tb)
-{
-	struct blob_attr *user, *pass;
-
-	user = tb[SERVER_INFO_LOCAL_USERNAME];
-	pass = tb[SERVER_INFO_LOCAL_PASSWORD];
-
-	if (user)
-		config.local_username = blobmsg_data(user);
-	if (pass)
-		config.local_password = blobmsg_data(pass);
-
-	if (!user && !pass)
-		return false;
-
-	cwmp_update_config(CONFIG_CHANGE_LOCAL_INFO);
-	return true;
-}
-
-
-static int
-cwmp_server_info_set(struct ubus_context *ctx, struct ubus_object *obj,
-		     struct ubus_request_data *req, const char *method,
-		     struct blob_attr *msg)
-{
-	struct blob_attr *tb[__SERVER_INFO_MAX];
-	bool changed = false;
-
-	blobmsg_parse(info_policy, __SERVER_INFO_MAX, tb, blobmsg_data(msg), blobmsg_data_len(msg));
-
-	if (tb[SERVER_INFO_URL])
-		changed |= cwmp_server_info_set_url(tb);
-
-	if (tb[SERVER_INFO_PERIODIC_INTERVAL] || tb[SERVER_INFO_PERIODIC_ENABLED])
-		changed |= cwmp_server_info_set_periodic(tb);
-
-	changed |= cwmp_server_info_set_local(tb);
-
-	if (changed)
-		cwmp_commit_config();
-
-	return 0;
-}
-
 static int
 cwmp_session_completed(struct ubus_context *ctx, struct ubus_object *obj,
 		       struct ubus_request_data *req, const char *method,
@@ -332,9 +214,6 @@ cwmp_reload(struct ubus_context *ctx, struct ubus_object *obj,
 }
 
 static struct ubus_method cwmp_methods[] = {
-	UBUS_METHOD_NOARG("server_info_get", cwmp_server_info_get),
-	UBUS_METHOD("server_info_set", cwmp_server_info_set, info_policy),
-
 	UBUS_METHOD_NOARG("connection_request", cwmp_connection_request),
 	UBUS_METHOD_NOARG("event_sent", cwmp_event_sent),
 	UBUS_METHOD("event_add", cwmp_event_add, event_policy),
