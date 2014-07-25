@@ -114,5 +114,8 @@ void cwmp_commit_config(void);
 int cwmp_ubus_register(void);
 void cwmp_ubus_command(struct blob_attr *data);
 
+void cwmp_object_cache_load(struct blob_attr *data);
+void cwmp_object_cache_dump(struct blob_buf *buf);
+struct blob_attr *cwmp_object_cache_get(const char *path, struct blob_attr *list);
 
 #endif

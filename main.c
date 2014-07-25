@@ -105,6 +105,10 @@ static void __cwmp_save_cache(struct uloop_timeout *timeout)
 	cwmp_state_get_downloads(&b);
 	blobmsg_close_array(&b, c);
 
+	c = blobmsg_open_table(&b, "objects");
+	cwmp_object_cache_dump(&b);
+	blobmsg_close_table(&b, c);
+
 	str = blobmsg_format_json(b.head, true);
 	if (debug_level)
 		fprintf(stderr, "Updated cache: %s\n", str);
@@ -424,12 +428,14 @@ static void cwmp_load_cache(const char *filename)
 		CACHE_URL,
 		CACHE_EVENTS,
 		CACHE_DOWNLOADS,
+		CACHE_OBJECTS,
 		__CACHE_MAX,
 	};
 	static const struct blobmsg_policy policy[__CACHE_MAX] = {
 		[CACHE_URL] = { "acs_url", BLOBMSG_TYPE_STRING },
 		[CACHE_EVENTS] = { "events", BLOBMSG_TYPE_ARRAY },
 		[CACHE_DOWNLOADS] = { "downloads", BLOBMSG_TYPE_ARRAY },
+		[CACHE_OBJECTS] = { "objects", BLOBMSG_TYPE_TABLE },
 	};
 	struct blob_attr *tb[__CACHE_MAX], *cur;
 	struct stat st;
@@ -443,11 +449,14 @@ static void cwmp_load_cache(const char *filename)
 
 	blobmsg_parse(policy, __CACHE_MAX, tb, blob_data(b.head), blob_len(b.head));
 
-	if (tb[CACHE_EVENTS])
-		cwmp_add_events(tb[CACHE_EVENTS]);
+	if ((cur = tb[CACHE_EVENTS]))
+		cwmp_add_events(cur);
 
-	if (tb[CACHE_DOWNLOADS])
-		cwmp_add_downloads(tb[CACHE_DOWNLOADS]);
+	if ((cur = tb[CACHE_DOWNLOADS]))
+		cwmp_add_downloads(cur);
+
+	if ((cur = tb[CACHE_OBJECTS]))
+		cwmp_object_cache_load(cur);
 
 	if (config.acs_info[0]) {
 		cur = tb[CACHE_URL];

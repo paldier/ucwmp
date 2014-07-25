@@ -213,6 +213,43 @@ cwmp_reload(struct ubus_context *ctx, struct ubus_object *obj,
 	return 0;
 }
 
+enum {
+	OBJECT_PATH,
+	OBJECT_LIST,
+	__OBJECT_MAX,
+};
+
+static const struct blobmsg_policy obj_policy[] = {
+	[OBJECT_PATH] = { "path", BLOBMSG_TYPE_STRING },
+	[OBJECT_LIST] = { "list", BLOBMSG_TYPE_ARRAY },
+};
+
+static int
+cwmp_object_list(struct ubus_context *ctx, struct ubus_object *obj,
+		 struct ubus_request_data *req, const char *method,
+		 struct blob_attr *msg)
+{
+	struct blob_attr *tb[__OBJECT_MAX];
+	struct blob_attr *list;
+	const char *path;
+
+	blobmsg_parse(obj_policy, __OBJECT_MAX, tb, blobmsg_data(msg), blobmsg_data_len(msg));
+	if (!tb[OBJECT_PATH] || !tb[OBJECT_LIST])
+		return UBUS_STATUS_INVALID_ARGUMENT;
+
+	path = blobmsg_get_string(tb[OBJECT_PATH]);
+	list = tb[OBJECT_LIST];
+
+	list = cwmp_object_cache_get(path, list);
+
+	blob_buf_init(&b, 0);
+	blobmsg_add_field(&b, BLOBMSG_TYPE_TABLE, "objects",
+			  blobmsg_data(list), blobmsg_data_len(list));
+	ubus_send_reply(ctx, req, b.head);
+
+	return 0;
+}
+
 static struct ubus_method cwmp_methods[] = {
 	UBUS_METHOD_NOARG("connection_request", cwmp_connection_request),
 	UBUS_METHOD_NOARG("event_sent", cwmp_event_sent),
@@ -222,6 +259,7 @@ static struct ubus_method cwmp_methods[] = {
 	UBUS_METHOD_MASK("download_done", cwmp_download_done_req, transfer_policy,
 			 (1 << CWMP_DL_URL)),
 
+	UBUS_METHOD("object_list", cwmp_object_list, obj_policy),
 	UBUS_METHOD_NOARG("factory_reset", cwmp_factory_reset),
 	UBUS_METHOD_NOARG("reboot", cwmp_reboot),
 	UBUS_METHOD_NOARG("reload", cwmp_reload),
