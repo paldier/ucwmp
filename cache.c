@@ -37,14 +37,64 @@ cwmp_object_get_seq(int *seq, const char *name, struct blob_attr *prev)
 		goto out;
 
 	blobmsg_for_each_attr(cur, prev, rem) {
+		char *cur_name;
+
 		if (strcmp(blobmsg_name(cur), name) != 0)
 			continue;
+
+		/* clear name here so that we can find deleted objects later */
+		cur_name = (char *) blobmsg_name(cur);
+		*cur_name = 0;
 
 		return blobmsg_get_u32(cur);
 	}
 
 out:
 	return (*seq)++;
+}
+
+static void
+cwmp_object_cache_free(struct cwmp_object_cache *cache)
+{
+	avl_delete(&objects, &cache->avl);
+	free(cache);
+}
+
+static void
+cwmp_object_delete_old(struct cwmp_object_cache *cache)
+{
+	struct cwmp_object_cache *cache_cur;
+	struct blob_attr *cur;
+	const char *base_name;
+	int base_len;
+	int rem;
+
+	base_name = blobmsg_name(cache->data);
+	base_len = strlen(base_name);
+
+	blobmsg_for_each_attr(cur, cache->data, rem) {
+		if (!blobmsg_name(cur)[0])
+			continue;
+
+		cache_cur = cache;
+
+		while (cache_cur != avl_last_element(&objects, cache, avl)) {
+			const char *name;
+
+			cache_cur = avl_next_element(cache_cur, avl);
+			name = cache_cur->avl.key;
+
+			if (strncmp(name, base_name, base_len) != 0 ||
+				name[base_len] != '.')
+				break;
+
+			if (strcmp(&name[base_len + 1], blobmsg_name(cur)) != 0)
+				continue;
+
+			cwmp_object_cache_free(cache_cur);
+			break;
+		}
+	}
 }
 
 static struct blob_attr *
@@ -87,8 +137,8 @@ struct blob_attr *cwmp_object_cache_get(const char *path, struct blob_attr *list
 	blobmsg_close_table(&b, c);
 
 	if (cache) {
-		avl_delete(&objects, &cache->avl);
-		free(cache);
+		cwmp_object_delete_old(cache);
+		cwmp_object_cache_free(cache);
 	}
 
 	return cwmp_object_cache_add(blob_data(b.head), seq);
@@ -108,7 +158,7 @@ void cwmp_object_cache_dump(struct blob_buf *buf)
 	}
 }
 
-static void cwmp_object_cache_free(void)
+static void cwmp_object_cache_free_all(void)
 {
 	struct cwmp_object_cache *cache, *next;
 
@@ -126,7 +176,7 @@ void cwmp_object_cache_load(struct blob_attr *data)
 	struct blob_attr *cur;
 	int rem;
 
-	cwmp_object_cache_free();
+	cwmp_object_cache_free_all();
 
 	blobmsg_for_each_attr(cur, data, rem) {
 		blobmsg_parse_array(policy, 2, tb, blobmsg_data(cur), blobmsg_data_len(cur));
