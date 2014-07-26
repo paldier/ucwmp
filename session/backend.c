@@ -49,11 +49,32 @@ void cwmp_backend_load_data(const char *path)
 	acs_api_load_module(&api, "tr-098");
 }
 
+static void backend_set_instance(struct cwmp_object *c_obj)
+{
+	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
+	struct cwmp_object_instance *in;
+
+	if (!c_obj)
+		return;
+
+	backend_set_instance(c_obj->parent);
+
+	if (!c_obj->instances)
+		return;
+
+	if (c_obj->cur_instance < 0)
+		return;
+
+	in = &c_obj->instances[c_obj->cur_instance];
+	acs_object_set_instance(&api, obj->mgmt, in->name);
+}
+
 static int backend_get_param(struct cwmp_object *c_obj, int param, const char **value)
 {
 	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
 	struct blob_attr *attr;
 
+	backend_set_instance(c_obj);
 	if (acs_param_get(&api, obj->params[param].mgmt, &attr))
 		return CWMP_ERROR_INTERNAL_ERROR;
 
@@ -69,6 +90,7 @@ static int backend_set_param(struct cwmp_object *c_obj, int param, const char *v
 {
 	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
 
+	backend_set_instance(c_obj);
 	if (acs_param_set(&api, obj->params[param].mgmt, value))
 		return CWMP_ERROR_INTERNAL_ERROR;
 
@@ -114,6 +136,7 @@ static int backend_get_instances(struct cwmp_object *c_obj)
 	if (c_obj->instances)
 		return 0;
 
+	backend_set_instance(c_obj->parent);
 	if (acs_object_get_instances(&api, obj->mgmt))
 		return -1;
 
