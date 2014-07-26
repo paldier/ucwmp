@@ -74,7 +74,8 @@ __cwmp_object_get(struct cwmp_object *root, const char *path, const char **param
 	struct cwmp_object *obj = root;
 	struct cwmp_object *parent = root;
 	struct avl_tree *tree;
-	const char *cur = path, *next;
+	const char *cur = path, *next = path;
+	bool instance_set = false;
 
 	if (!root) {
 		obj = &root_object;
@@ -86,18 +87,25 @@ __cwmp_object_get(struct cwmp_object *root, const char *path, const char **param
 		if (strncmp(path, cwmp_object_name(obj), next - path) != 0)
 			return NULL;
 
-		cur = next + 1;
+		next++;
 	}
 
 	while (1) {
+		cur = next;
 		next = strchr(cur, '.');
 		if (!next)
 			break;
 
 		next++;
-		if (obj->fetch_objects && obj->fetch_objects(obj))
-			return NULL;
+		if (!instance_set && obj->set_instance) {
+			if (obj->set_instance(obj, cur))
+				return NULL;
 
+			instance_set = true;
+			continue;
+		}
+
+		instance_set = false;
 		tree = &obj->objects;
 		parent = obj;
 		obj = avl_find_element(tree, cur, obj, node);
@@ -106,8 +114,6 @@ __cwmp_object_get(struct cwmp_object *root, const char *path, const char **param
 
 		if (!obj)
 			return NULL;
-
-		cur = next;
 	}
 
 	if (param)
@@ -340,9 +346,33 @@ static int fill_path(struct path_iterate *it, int ofs, const char *name)
 	return ofs + len;
 }
 
-static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj, int ofs, bool next)
+static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj, int ofs, bool next);
+
+static int
+__cwmp_path_iterate_obj(struct path_iterate *it, struct cwmp_object *obj,
+			int ofs, bool next)
 {
 	struct cwmp_object *cur;
+	int n = 0;
+
+	avl_for_each_element(&obj->objects, cur, node) {
+		int ofs_cur = fill_path(it, ofs, cwmp_object_name(cur));
+
+		strcpy(it->path + ofs_cur, ".");
+		ofs_cur++;
+
+		n += it->cb(it, cur, -1);
+		if (next)
+			continue;
+
+		n += __cwmp_path_iterate(it, cur, ofs_cur, false);
+	}
+
+	return n;
+}
+
+static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj, int ofs, bool next)
+{
 	int n = 0;
 	int i;
 
@@ -353,18 +383,24 @@ static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj,
 		n += it->cb(it, obj, i);
 	}
 
-	if (obj->fetch_objects)
-		obj->fetch_objects(obj);
+	if (!obj->get_instances)
+	    return n + __cwmp_path_iterate_obj(it, obj, ofs, next);
 
-	avl_for_each_element(&obj->objects, cur, node) {
-		int ofs_cur = fill_path(it, ofs, cwmp_object_name(cur));
+	if (obj->get_instances(obj) || !obj->instances)
+		return n;
 
-		strcpy(it->path + ofs_cur, ".");
-		ofs_cur++;
 
-		n += it->cb(it, cur, -1);
+	for (i = 0; i < obj->n_instances; i++) {
+		int ofs_cur = ofs;
+
+		ofs_cur += snprintf(it->path + ofs_cur, sizeof(it->path) - ofs_cur,
+				    "%d.", obj->instances[i].seq);
+		n += it->cb(it, obj, -2);
+
 		if (!next)
-			n += __cwmp_path_iterate(it, cur, ofs_cur, next);
+			continue;
+
+		n += __cwmp_path_iterate_obj(it, obj, ofs_cur, false);
 	}
 
 	return n;

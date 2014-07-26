@@ -21,6 +21,13 @@
 
 struct ubus_context;
 
+struct cwmp_object_instance {
+	const char *name;
+	int seq;
+
+	char **values;
+};
+
 struct cwmp_object {
 	struct avl_node node;
 
@@ -33,12 +40,17 @@ struct cwmp_object {
 	char **values;
 	int n_params;
 
+	struct cwmp_object_instance *instances;
+	int n_instances;
+
 	unsigned long *writable;
 	unsigned long *write_only;
 
 	int (*commit)(struct cwmp_object *obj);
 	int (*validate)(struct cwmp_object *obj);
-	int (*fetch_objects)(struct cwmp_object *obj);
+
+	int (*set_instance)(struct cwmp_object *obj, const char *name);
+	int (*get_instances)(struct cwmp_object *obj);
 
 	int (*get_param)(struct cwmp_object *obj, int param, const char **value);
 	int (*set_param)(struct cwmp_object *obj, int param, const char *value);
