@@ -131,7 +131,9 @@ static int backend_get_instances(struct cwmp_object *c_obj)
 	struct cwmp_object_instance *in;
 	struct blob_attr *data, *cur;
 	char path[CWMP_PATH_LEN];
+	char *buf;
 	int n, rem;
+	int len = 0;
 
 	if (c_obj->instances)
 		return 0;
@@ -157,12 +159,16 @@ static int backend_get_instances(struct cwmp_object *c_obj)
 	if (n <= 0)
 		return -1;
 
-	in = calloc(n, sizeof(*in));
+	blobmsg_for_each_attr(cur, data, rem)
+		len += strlen(blobmsg_name(cur)) + 1;
+
+	in = calloc_a(n * sizeof(*in), &buf, len);
 	c_obj->instances = in;
 	c_obj->n_instances = 0;
 	blobmsg_for_each_attr(cur, data, rem) {
-		in->name = blobmsg_name(cur);
+		in->name = strcpy(buf, blobmsg_name(cur));
 		in->seq = blobmsg_get_u32(cur);
+		buf += strlen(buf) + 1;
 		in++;
 		c_obj->n_instances++;
 	}
