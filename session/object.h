@@ -25,7 +25,7 @@ struct cwmp_object_instance {
 	const char *name;
 	int seq;
 
-	char **values;
+	char **prev_values;
 };
 
 struct cwmp_object {
@@ -36,10 +36,10 @@ struct cwmp_object {
 
 	const char * const *params;
 	const char * const *param_types;
-	char **prev_values;
 	char **values;
 	int n_params;
 
+	struct cwmp_object_instance root_instance;
 	struct cwmp_object_instance *instances;
 	int n_instances;
 	int cur_instance;

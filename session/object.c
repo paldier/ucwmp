@@ -162,25 +162,46 @@ struct cwmp_object *cwmp_object_get(struct cwmp_object *root, const char *path, 
 	return __cwmp_object_get(root, path, param, false);
 }
 
+static void
+__cwmp_commit_obj(struct cwmp_object *obj, struct cwmp_object_instance *in,
+		  bool apply)
+{
+	int i;
+
+	if (!in->prev_values)
+		return;
+
+	for (i = 0; i < obj->n_params; i++) {
+		if (!in->prev_values[i])
+			continue;
+
+		if (!apply)
+			obj->set_param(obj, i, in->prev_values[i]);
+
+		free(in->prev_values[i]);
+	}
+
+	free(in->prev_values);
+	in->prev_values = NULL;
+}
+
 static void cwmp_commit_obj(struct cwmp_object *obj, bool apply)
 {
 	int i;
 
-	if (!obj->prev_values)
-		return;
+	if (obj->get_instances) {
+		if (!obj->instances)
+			return;
 
-	for (i = 0; i < obj->n_params; i++) {
-		if (!obj->prev_values[i])
-			continue;
+		for (i = 0; i < obj->n_instances; i++) {
+			obj->cur_instance = i;
+			__cwmp_commit_obj(obj, &obj->instances[i], apply);
+		}
 
-		if (!apply)
-			obj->set_param(obj, i, obj->prev_values[i]);
-
-		free(obj->prev_values[i]);
+		obj->cur_instance = -1;
+	} else {
+		__cwmp_commit_obj(obj, &obj->root_instance, apply);
 	}
-
-	free(obj->prev_values);
-	obj->prev_values = NULL;
 
 	if (obj->commit)
 		obj->commit(obj);
@@ -270,11 +291,26 @@ int cwmp_object_add(struct cwmp_object *obj, const char *name, struct cwmp_objec
 	return avl_insert(&parent->objects, &obj->node);
 }
 
+static void cwmp_object_delete_instance(struct cwmp_object_instance *in)
+{
+	free(in->prev_values);
+	in->prev_values = NULL;
+}
+
 void cwmp_object_delete(struct cwmp_object *obj)
 {
+	int i;
+
 	avl_delete(&obj->parent->objects, &obj->node);
-	free(obj->prev_values);
-	obj->prev_values = NULL;
+	cwmp_object_delete_instance(&obj->root_instance);
+
+	if (!obj->instances)
+		return;
+
+	for (i = 0; i < obj->n_instances; i++)
+		cwmp_object_delete_instance(&obj->instances[i]);
+
+	free(obj->instances);
 }
 
 bool cwmp_object_param_writable(struct cwmp_object *obj, int param)
@@ -296,7 +332,15 @@ static bool cwmp_object_param_write_only(struct cwmp_object *obj, int param)
 static int
 __cwmp_param_set(struct cwmp_object *obj, const char *param, const char *value)
 {
+	struct cwmp_object_instance *in = &obj->root_instance;
 	int i;
+
+	if (obj->get_instances) {
+		if (obj->cur_instance < 0)
+			return CWMP_ERROR_INVALID_PARAM;
+
+		in = &obj->instances[obj->cur_instance];
+	}
 
 	if (!obj->set_param)
 		return CWMP_ERROR_READ_ONLY_PARAM;
@@ -308,15 +352,15 @@ __cwmp_param_set(struct cwmp_object *obj, const char *param, const char *value)
 	if (!cwmp_object_param_writable(obj, i))
 		return CWMP_ERROR_READ_ONLY_PARAM;
 
-	if (!obj->prev_values)
-		obj->prev_values = calloc(obj->n_params, sizeof(*obj->prev_values));
+	if (!in->prev_values)
+		in->prev_values = calloc(obj->n_params, sizeof(*in->prev_values));
 
-	if (!obj->prev_values[i]) {
+	if (!in->prev_values[i]) {
 		const char *val;
 
 		obj->get_param(obj, i, &val);
 		if (val)
-			obj->prev_values[i] = strdup(val);
+			in->prev_values[i] = strdup(val);
 	}
 
 	return obj->set_param(obj, i, value);
