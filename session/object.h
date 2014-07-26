@@ -42,6 +42,7 @@ struct cwmp_object {
 
 	struct cwmp_object_instance *instances;
 	int n_instances;
+	int cur_instance;
 
 	unsigned long *writable;
 	unsigned long *write_only;
@@ -49,7 +50,6 @@ struct cwmp_object {
 	int (*commit)(struct cwmp_object *obj);
 	int (*validate)(struct cwmp_object *obj);
 
-	int (*set_instance)(struct cwmp_object *obj, const char *name);
 	int (*get_instances)(struct cwmp_object *obj);
 
 	int (*get_param)(struct cwmp_object *obj, int param, const char **value);

@@ -68,6 +68,14 @@ cwmp_object_create_empty(struct cwmp_object *parent, const char *name)
 	return obj;
 }
 
+static void cwmp_object_reset(struct cwmp_object *obj)
+{
+	while (obj) {
+		obj->cur_instance = -1;
+		obj = obj->parent;
+	}
+}
+
 static struct cwmp_object *
 __cwmp_object_get(struct cwmp_object *root, const char *path, const char **param, bool create)
 {
@@ -76,6 +84,7 @@ __cwmp_object_get(struct cwmp_object *root, const char *path, const char **param
 	struct avl_tree *tree;
 	const char *cur = path, *next = path;
 	bool instance_set = false;
+	int i;
 
 	if (!root) {
 		obj = &root_object;
@@ -97,11 +106,32 @@ __cwmp_object_get(struct cwmp_object *root, const char *path, const char **param
 			break;
 
 		next++;
-		if (!instance_set && obj->set_instance) {
-			if (obj->set_instance(obj, cur))
+		if (!instance_set && obj->get_instances) {
+			char *err;
+			int seq;
+
+			seq = strtoul(cur, &err, 10);
+			if (err && *err)
 				return NULL;
 
-			instance_set = true;
+			if (obj->get_instances(obj))
+				return NULL;
+
+			if (!obj->instances)
+				return NULL;
+
+			for (i = 0; i < obj->n_instances; i++) {
+				if (obj->instances[i].seq != seq)
+					continue;
+
+				instance_set = true;
+				obj->cur_instance = i;
+				break;
+			}
+
+			if (!instance_set)
+				return NULL;
+
 			continue;
 		}
 
@@ -223,6 +253,8 @@ static int simple_object_set_param(struct cwmp_object *obj, int param, const cha
 
 int cwmp_object_add(struct cwmp_object *obj, const char *name, struct cwmp_object *parent)
 {
+	obj->cur_instance = -1;
+
 	if (!obj->get_param)
 		obj->get_param = simple_object_get_param;
 
@@ -261,20 +293,15 @@ static bool cwmp_object_param_write_only(struct cwmp_object *obj, int param)
 	return bitfield_test(obj->write_only, param);
 }
 
-int cwmp_param_set(const char *name, const char *value)
+static int
+__cwmp_param_set(struct cwmp_object *obj, const char *param, const char *value)
 {
-	struct cwmp_object *obj;
-	const char *param_str;
 	int i;
-
-	obj = cwmp_object_get(NULL, name, &param_str);
-	if (!obj)
-		return CWMP_ERROR_INVALID_PARAM;
 
 	if (!obj->set_param)
 		return CWMP_ERROR_READ_ONLY_PARAM;
 
-	i = cwmp_object_get_param_idx(obj, param_str);
+	i = cwmp_object_get_param_idx(obj, param);
 	if (i < 0)
 		return CWMP_ERROR_INVALID_PARAM;
 
@@ -293,6 +320,22 @@ int cwmp_param_set(const char *name, const char *value)
 	}
 
 	return obj->set_param(obj, i, value);
+}
+
+int cwmp_param_set(const char *name, const char *value)
+{
+	struct cwmp_object *obj;
+	const char *param_str;
+	int ret;
+
+	obj = cwmp_object_get(NULL, name, &param_str);
+	if (!obj)
+		return CWMP_ERROR_INVALID_PARAM;
+
+	ret = __cwmp_param_set(obj, param_str, value);
+	cwmp_object_reset(obj);
+
+	return ret;
 }
 
 const char *cwmp_object_get_param(struct cwmp_object *obj, int i)
