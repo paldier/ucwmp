@@ -92,6 +92,39 @@ static void __constructor server_init(void)
 	cwmp_backend_init(ubus_ctx);
 }
 
+static void
+cwmp_object_cb(struct ubus_request *req, int type, struct blob_attr *msg)
+{
+	struct blobmsg_policy policy = { "objects", BLOBMSG_TYPE_TABLE };
+	struct blob_attr *data;
+	bool *found = req->priv;
+
+	blobmsg_parse(&policy, 1, &data, blob_data(msg), blob_len(msg));
+	if (!data)
+		return;
+
+	*found = true;
+	blob_buf_init(&b, 0);
+	blobmsg_add_field(&b, BLOBMSG_TYPE_TABLE, NULL, blobmsg_data(data), blobmsg_data_len(data));
+}
+
+struct blob_attr *
+cwmp_get_cache_instances(const char *path, struct blob_attr *data)
+{
+	bool found = false;
+
+	blob_buf_init(&b, 0);
+	blobmsg_add_string(&b, "path", path);
+	blobmsg_add_field(&b, BLOBMSG_TYPE_ARRAY, "list",
+			  blobmsg_data(data), blobmsg_data_len(data));
+	ubus_invoke(ubus_ctx, cwmp_id, "object_list", b.head, cwmp_object_cb, &found, 0);
+
+	if (!found)
+		return NULL;
+
+	return blob_data(b.head);
+}
+
 int cwmp_invoke(const char *cmd, struct blob_attr *data)
 {
 	return ubus_invoke(ubus_ctx, cwmp_id, cmd, data, NULL, NULL, 0);

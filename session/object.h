@@ -78,6 +78,9 @@ struct cwmp_object *cwmp_object_get(struct cwmp_object *root, const char *path, 
 struct cwmp_object *cwmp_object_path_create(struct cwmp_object *root, const char *path, const char **param);
 const char *cwmp_object_get_param(struct cwmp_object *obj, int i);
 int cwmp_object_get_param_idx(struct cwmp_object *obj, const char *name);
+struct blob_attr *
+cwmp_get_cache_instances(const char *path, struct blob_attr *data);
+
 
 static inline const char *cwmp_object_name(struct cwmp_object *obj)
 {
