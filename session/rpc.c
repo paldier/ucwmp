@@ -49,18 +49,17 @@ static void cwmp_close_array(node_t *node, int n_values, const char *type)
 
 void cwmp_add_parameter_value_struct(node_t *node, const char *name, const char *value, const char *type)
 {
-	struct xml_kv kv[2] = {
-		{ "Name", name },
-		{ "Value", value },
-	};
-	node_t *nodes[2];
+	node_t *cur;
 
 	node = roxml_add_node(node, 0, ROXML_ELM_NODE, "ParameterValueStruct", NULL);
-	xml_add_multi(node, ROXML_ELM_NODE, ARRAY_SIZE(kv), kv, nodes);
+	roxml_add_node(node, 0, ROXML_ELM_NODE, "Name", (char *) name);
+
+	cur = roxml_add_node(node, 0, ROXML_ELM_NODE, "Value", NULL);
+	roxml_add_node(cur, 0, ROXML_CDATA_NODE, NULL, (char *) value);
 	if (!type)
 		type = "xsd:string";
 
-	roxml_add_node(nodes[1], 0, ROXML_ATTR_NODE, "xsi:type", (char *) type);
+	roxml_add_node(cur, 0, ROXML_ATTR_NODE, "xsi:type", (char *) type);
 }
 
 static int cwmp_add_obj_parameter_value(struct path_iterate *it, struct cwmp_object *obj, int i)
