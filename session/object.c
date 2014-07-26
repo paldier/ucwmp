@@ -432,18 +432,17 @@ static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj,
 	if (obj->get_instances(obj) || !obj->instances)
 		return n;
 
-
 	for (i = 0; i < obj->n_instances; i++) {
 		int ofs_cur = ofs;
 
+		obj->cur_instance = i;
 		ofs_cur += snprintf(it->path + ofs_cur, sizeof(it->path) - ofs_cur,
 				    "%d.", obj->instances[i].seq);
 		n += it->cb(it, obj, -2);
 
 		if (!next)
-			continue;
-
-		n += __cwmp_path_iterate_obj(it, obj, ofs_cur, false);
+			n += __cwmp_path_iterate_obj(it, obj, ofs_cur, false);
+		obj->cur_instance = -1;
 	}
 
 	return n;
