@@ -106,7 +106,7 @@ __cwmp_object_get(struct cwmp_object *root, const char *path, const char **param
 			break;
 
 		next++;
-		if (!instance_set && obj->get_instances) {
+		if (!create && !instance_set && obj->get_instances) {
 			char *err;
 			int seq;
 
