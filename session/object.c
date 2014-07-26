@@ -469,10 +469,10 @@ __cwmp_path_iterate_obj(struct path_iterate *it, struct cwmp_object *obj,
 	return n;
 }
 
-static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj, int ofs, bool next)
+static int
+__cwmp_path_iterate_params(struct path_iterate *it, struct cwmp_object *obj, int ofs)
 {
-	int n = 0;
-	int i;
+	int i, n = 0;
 
 	for (i = 0; i < obj->n_params; i++) {
 		if (fill_path(it, ofs, obj->params[i]) < 0)
@@ -481,8 +481,19 @@ static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj,
 		n += it->cb(it, obj, i);
 	}
 
-	if (!obj->get_instances)
-	    return n + __cwmp_path_iterate_obj(it, obj, ofs, next);
+	return n;
+}
+
+static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj, int ofs, bool next)
+{
+	int n = 0;
+	int i;
+
+	if (!obj->get_instances) {
+		n += __cwmp_path_iterate_params(it, obj, ofs);
+		n += __cwmp_path_iterate_obj(it, obj, ofs, next);
+		return n;
+	}
 
 	if (obj->get_instances(obj) || !obj->instances)
 		return n;
@@ -493,7 +504,9 @@ static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj,
 		obj->cur_instance = i;
 		ofs_cur += snprintf(it->path + ofs_cur, sizeof(it->path) - ofs_cur,
 				    "%d.", obj->instances[i].seq);
+
 		n += it->cb(it, obj, -2);
+		n += __cwmp_path_iterate_params(it, obj, ofs_cur);
 
 		if (!next)
 			n += __cwmp_path_iterate_obj(it, obj, ofs_cur, false);
