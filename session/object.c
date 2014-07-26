@@ -401,17 +401,12 @@ const char *cwmp_object_get_param(struct cwmp_object *obj, int i)
 	return value;
 }
 
-const char *cwmp_param_get(const char *name, const char **type)
+static const char *
+__cwmp_param_get(struct cwmp_object *obj, const char *param, const char **type)
 {
-	struct cwmp_object *obj;
-	const char *param_str;
 	int i;
 
-	obj = cwmp_object_get(NULL, name, &param_str);
-	if (!obj)
-		return NULL;
-
-	i = cwmp_object_get_param_idx(obj, param_str);
+	i = cwmp_object_get_param_idx(obj, param);
 	if (i < 0)
 		return NULL;
 
@@ -419,6 +414,22 @@ const char *cwmp_param_get(const char *name, const char **type)
 		*type = obj->param_types ? obj->param_types[i] : NULL;
 
 	return cwmp_object_get_param(obj, i);
+}
+
+const char *cwmp_param_get(const char *name, const char **type)
+{
+	struct cwmp_object *obj;
+	const char *param_str;
+	const char *ret;
+
+	obj = cwmp_object_get(NULL, name, &param_str);
+	if (!obj)
+		return NULL;
+
+	ret = __cwmp_param_get(obj, param_str, type);
+	cwmp_object_reset(obj);
+
+	return ret;
 }
 
 static int fill_path(struct path_iterate *it, int ofs, const char *name)
