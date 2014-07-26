@@ -12,6 +12,7 @@
  * GNU General Public License for more details.
  */
 #include <libacs/client.h>
+#include <libubox/blobmsg_json.h>
 
 #include "soap.h"
 #include "object.h"
@@ -89,6 +90,63 @@ static int backend_commit(struct cwmp_object *c_obj)
 	return acs_commit(&api);
 }
 
+static char *backend_fill_path(char *path, char *end, struct cwmp_object *c_obj)
+{
+	if (c_obj->parent)
+		path = backend_fill_path(path, end, c_obj->parent);
+
+	path += snprintf(path, end - path, "%s.", cwmp_object_name(c_obj));
+
+	if (c_obj->get_instances && c_obj->cur_instance >= 0)
+		path += snprintf(path, end - path, "%d.", c_obj->cur_instance);
+
+	return path;
+}
+
+static int backend_get_instances(struct cwmp_object *c_obj)
+{
+	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
+	struct cwmp_object_instance *in;
+	struct blob_attr *data, *cur;
+	char path[CWMP_PATH_LEN];
+	int n, rem;
+
+	if (c_obj->instances)
+		return 0;
+
+	if (acs_object_get_instances(&api, obj->mgmt))
+		return -1;
+
+	data = obj->mgmt->instances;
+	if (!data)
+		return -1;
+
+	if (blobmsg_type(data) != BLOBMSG_TYPE_ARRAY)
+		return -1;
+
+	path[0] = 0;
+	backend_fill_path(path, path + sizeof(path), c_obj);
+	data = cwmp_get_cache_instances(path, data);
+	if (!data)
+		return -1;
+
+	n = blobmsg_check_array(data, BLOBMSG_TYPE_INT32);
+	if (n <= 0)
+		return -1;
+
+	in = calloc(n, sizeof(*in));
+	c_obj->instances = in;
+	c_obj->n_instances = 0;
+	blobmsg_for_each_attr(cur, data, rem) {
+		in->name = blobmsg_name(cur);
+		in->seq = blobmsg_get_u32(cur);
+		in++;
+		c_obj->n_instances++;
+	}
+
+	return 0;
+}
+
 static void backend_object_init(struct backend_object *obj)
 {
 	obj->cwmp.get_param = backend_get_param;
@@ -114,8 +172,9 @@ backend_add_parameters(struct backend_object *obj, const char **param_names,
 	}
 }
 
-static void backend_create_object(struct acs_object *m_obj)
+static void __backend_create_object(struct cwmp_object *root, struct acs_object *m_obj)
 {
+	struct acs_object *m_obj_cur;
 	struct cwmp_object *parent;
 	struct backend_object *obj;
 	struct backend_param *params;
@@ -123,7 +182,7 @@ static void backend_create_object(struct acs_object *m_obj)
 	const char *name;
 	unsigned long *writable;
 
-	parent = cwmp_object_path_create(&root_object, acs_object_name(m_obj), &name);
+	parent = cwmp_object_path_create(root, acs_object_name(m_obj), &name);
 	if (!parent)
 		return;
 
@@ -140,8 +199,18 @@ static void backend_create_object(struct acs_object *m_obj)
 	obj->cwmp.writable = writable;
 	backend_add_parameters(obj, param_names, writable);
 	backend_object_init(obj);
+	if (m_obj->get_instance_keys)
+		obj->cwmp.get_instances = backend_get_instances;
 
 	cwmp_object_add(&obj->cwmp, name, parent);
+
+	avl_for_each_element(&m_obj->objects, m_obj_cur, avl)
+		__backend_create_object(&obj->cwmp, m_obj_cur);
+}
+
+static void backend_create_object(struct acs_object *m_obj)
+{
+	__backend_create_object(&root_object, m_obj);
 }
 
 void cwmp_backend_add_objects(void)
