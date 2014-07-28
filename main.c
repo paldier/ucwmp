@@ -89,6 +89,9 @@ static void __cwmp_save_cache(struct uloop_timeout *timeout)
 	FILE *f;
 	void *c;
 
+	if (!config.acs_info[0])
+		return;
+
 	blob_buf_init(&b, 0);
 
 	f = fopen(cache_file, "w+");
