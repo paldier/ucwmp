@@ -26,6 +26,7 @@ prepare_config() {
 	[ "$enabled" = 1 ] || return
 
 	. /etc/openwrt_release
+	. /etc/device_info
 
 	json_init
 	json_add_string SoftwareVersion "$DISTRIB_CODENAME/$DISTRIB_REVISION"
@@ -33,10 +34,16 @@ prepare_config() {
 		config_get val "$cfg" "$field"
 		[ -n "$val" ] || {
 			case "$field" in
-				Manufacturer) val="OpenWrt";;
-				Description|ModelName) val="$DISTRIB_TARGET";;
+				Manufacturer) val="${DEVICE_MANUFACTURER:-OpenWrt}";;
+				Description|ModelName) val="$DEVICE_PRODUCT";;
 				SerialNumber) val="$(cat /sys/class/net/eth0/address)";;
-				ManufacturerOUI) val="$(cat /sys/class/net/eth0/address)"; val="${val%:*:*:*}";;
+				ManufacturerOUI)
+					val="$MANUFACTURER_OUI"
+					[ -n "$val" ] || {
+						val="$(cat /sys/class/net/eth0/address)"
+						val="${val%:*:*:*}"
+					}
+					;;
 				HardwareVersion) val="v0";;
 			esac
 		}
