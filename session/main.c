@@ -140,7 +140,12 @@ static void __cwmp_send_request(struct uloop_timeout *t)
 	int len = 0;
 	cwmp_dump_message("Send CPE data", cur_request);
 
-	uclient_connect(uc);
+	if (uclient_connect(uc)) {
+		if (debug_level)
+			perror("Failed to connect to CPE");
+		return;
+	}
+
 	uclient_http_set_request_type(uc, "POST");
 	cwmp_add_cookies(uc);
 
@@ -235,7 +240,7 @@ static void cwmp_error(struct uclient *cl, int code)
 	uloop_end();
 }
 
-static void cwmp_connect(void)
+static int cwmp_connect(void)
 {
 	static struct uclient_cb cwmp_cb = {
 		.data_read = cwmp_data_read,
@@ -245,7 +250,7 @@ static void cwmp_connect(void)
 	char *auth_str;
 
 	if (uc)
-		return;
+		return -1;
 
 	if (!username && !password)
 		auth_str = NULL;
@@ -256,8 +261,16 @@ static void cwmp_connect(void)
 		sprintf(auth_str, "%s:%s", username, password);
 	}
 
+	if (debug_level)
+		fprintf(stderr, "Connecting to %s\n", url);
 	uc = uclient_new(url, auth_str, &cwmp_cb);
-	uclient_connect(uc);
+	if (uclient_connect(uc)) {
+		if (debug_level)
+			perror("Failed to connect to CPE");
+		return -1;
+	}
+
+	return 0;
 }
 
 static int usage(const char *progname)
@@ -349,7 +362,9 @@ int main(int argc, char **argv)
 
 	url = argv[0];
 	session_init = false;
-	cwmp_connect();
+
+	if (cwmp_connect())
+		return 1;
 
 	uclient_get_addr(local_addr, NULL, &uc->local_addr);
 	server_update_local_addr(local_addr, local_port);
