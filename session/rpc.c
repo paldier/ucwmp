@@ -279,7 +279,8 @@ static int cwmp_handle_get_parameter_attributes(struct rpc_data *data)
 	if (!cur)
 		return CWMP_ERROR_INVALID_PARAM;
 
-	it.node = cwmp_open_array(data->out, "ParameterList");
+	it.node = roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:GetParameterAttributesResponse", NULL);
+	it.node = cwmp_open_array(it.node, "ParameterList");
 
 	while (soap_array_iterate_contents(&cur, "string", &str)) {
 		bool partial;
@@ -357,6 +358,8 @@ static int cwmp_handle_set_parameter_attributes(struct rpc_data *data)
 
 	if (!ret)
 		cwmp_attr_cache_save();
+
+	roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:SetParameterAttributesResponse", NULL);
 
 	return ret;
 }
