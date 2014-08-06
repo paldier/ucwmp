@@ -489,7 +489,7 @@ static int __cwmp_path_iterate(struct path_iterate *it, struct cwmp_object *obj,
 	int n = 0;
 	int i;
 
-	if (!obj->get_instances) {
+	if (!obj->get_instances || obj->cur_instance >= 0) {
 		n += __cwmp_path_iterate_params(it, obj, ofs);
 		n += __cwmp_path_iterate_obj(it, obj, ofs, next);
 		return n;
