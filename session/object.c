@@ -111,7 +111,7 @@ __cwmp_object_get(struct cwmp_object *root, const char *path, const char **param
 			int seq;
 
 			seq = strtoul(cur, &err, 10);
-			if (err && *err)
+			if (err && *err && *err != '.')
 				return NULL;
 
 			if (obj->get_instances(obj))
