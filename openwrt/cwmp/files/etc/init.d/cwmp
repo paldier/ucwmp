@@ -40,8 +40,9 @@ prepare_config() {
 				ManufacturerOUI)
 					val="$MANUFACTURER_OUI"
 					[ -n "$val" ] || {
-						val="$(cat /sys/class/net/eth0/address)"
+						val="$(tr 'a-z' 'A-Z' < /sys/class/net/eth0/address)"
 						val="${val%:*:*:*}"
+						val="${val//:/}"
 					}
 					;;
 				HardwareVersion) val="v0";;
