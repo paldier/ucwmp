@@ -15,6 +15,7 @@
 #include <libubox/avl-cmp.h>
 #include <libubox/blobmsg.h>
 #include <libubox/blobmsg_json.h>
+#include <json-c/json.h>
 
 #include "rpc.h"
 #include "attr.h"

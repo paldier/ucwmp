@@ -19,6 +19,7 @@
 #include <libubox/uclient.h>
 #include <libubox/blobmsg.h>
 #include <libubox/blobmsg_json.h>
+#include <json-c/json.h>
 
 #include "soap.h"
 #include "rpc.h"
