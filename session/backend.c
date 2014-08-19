@@ -67,6 +67,7 @@ static void backend_set_instance(struct cwmp_object *c_obj)
 
 	in = &c_obj->instances[c_obj->cur_instance];
 	acs_object_set_instance(&api, obj->mgmt, in->name);
+	cwmp_debug(1, "backend", "Object '%s' set instance '%s'\n", cwmp_object_name(c_obj), in->name);
 }
 
 static int backend_get_param(struct cwmp_object *c_obj, int param, const char **value)
@@ -75,13 +76,19 @@ static int backend_get_param(struct cwmp_object *c_obj, int param, const char **
 	struct blob_attr *attr;
 
 	backend_set_instance(c_obj);
-	if (acs_param_get(&api, obj->params[param].mgmt, &attr))
+	if (acs_param_get(&api, obj->params[param].mgmt, &attr)) {
+		cwmp_debug(1, "backend", "Object '%s' parameter '%s' not found\n",
+			   cwmp_object_name(c_obj), c_obj->params[param]);
 		return CWMP_ERROR_INTERNAL_ERROR;
+	}
 
 	if (!attr || blobmsg_type(attr) != BLOBMSG_TYPE_STRING)
 		*value = "";
 	else
 		*value = blobmsg_data(attr);
+
+	cwmp_debug(1, "backend", "Object '%s' parameter '%s' get value '%s'\n",
+		   cwmp_object_name(c_obj), c_obj->params[param], *value);
 
 	return 0;
 }
@@ -91,8 +98,14 @@ static int backend_set_param(struct cwmp_object *c_obj, int param, const char *v
 	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
 
 	backend_set_instance(c_obj);
-	if (acs_param_set(&api, obj->params[param].mgmt, value))
+	if (acs_param_set(&api, obj->params[param].mgmt, value)) {
+		cwmp_debug(1, "backend", "Object '%s' parameter '%s' not found\n",
+			   cwmp_object_name(c_obj), c_obj->params[param]);
 		return CWMP_ERROR_INTERNAL_ERROR;
+	}
+
+	cwmp_debug(1, "backend", "Object '%s' parameter '%s' set value to '%s'\n",
+		   cwmp_object_name(c_obj), c_obj->params[param], value);
 
 	need_validate = true;
 	return 0;

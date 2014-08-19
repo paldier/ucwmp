@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <stdarg.h>
 
 #include <libubox/uloop.h>
 #include <libubox/uclient.h>
@@ -108,6 +109,18 @@ static void cwmp_add_cookies(struct uclient *cl)
 	uclient_http_reset_headers(cl);
 	uclient_http_set_header(cl, "Cookie", attr);
 	free(attr);
+}
+
+void cwmp_debug(int level, const char *system, const char *fmt, ...)
+{
+	va_list ap;
+
+	if (level > debug_level)
+		return;
+
+	va_start(ap, fmt);
+	fprintf(stderr, "DEBUG[%s]: ", system);
+	fprintf(stderr, fmt, ap);
 }
 
 static void cwmp_dump_message(const char *msg, const char *data)

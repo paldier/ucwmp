@@ -85,5 +85,6 @@ void cwmp_add_parameter_value_struct(node_t *node, const char *name, const char 
 int cwmp_invoke(const char *cmd, struct blob_attr *data);
 int cwmp_invoke_noarg(const char *cmd);
 
+void cwmp_debug(int level, const char *system, const char *fmt, ...);
 
 #endif
