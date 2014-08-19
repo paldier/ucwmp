@@ -259,28 +259,9 @@ int cwmp_object_get_param_idx(struct cwmp_object *obj, const char *name)
 	return -1;
 }
 
-static int simple_object_get_param(struct cwmp_object *obj, int param, const char **value)
-{
-	*value = obj->values[param];
-	return 0;
-}
-
-static int simple_object_set_param(struct cwmp_object *obj, int param, const char *value)
-{
-	free(obj->values[param]);
-	obj->values[param] = value ? strdup(value) : NULL;
-	return 0;
-}
-
 int cwmp_object_add(struct cwmp_object *obj, const char *name, struct cwmp_object *parent)
 {
 	obj->cur_instance = -1;
-
-	if (!obj->get_param)
-		obj->get_param = simple_object_get_param;
-
-	if (!obj->set_param)
-		obj->set_param = simple_object_set_param;
 
 	obj->parent = parent;
 	obj->node.key = name;

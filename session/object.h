@@ -36,7 +36,6 @@ struct cwmp_object {
 
 	const char * const *params;
 	const char * const *param_types;
-	char **values;
 	int n_params;
 
 	struct cwmp_object_instance root_instance;
