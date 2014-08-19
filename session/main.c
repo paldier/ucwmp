@@ -120,7 +120,8 @@ void cwmp_debug(int level, const char *system, const char *fmt, ...)
 
 	va_start(ap, fmt);
 	fprintf(stderr, "DEBUG[%s]: ", system);
-	fprintf(stderr, fmt, ap);
+	vfprintf(stderr, fmt, ap);
+	va_end(ap);
 }
 
 static void cwmp_dump_message(const char *msg, const char *data)
