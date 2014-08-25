@@ -28,6 +28,12 @@ struct cwmp_object_instance {
 	char **prev_values;
 };
 
+struct cwmp_param_cache {
+	struct avl_node node;
+
+	char value[];
+};
+
 struct cwmp_object {
 	struct avl_node node;
 
