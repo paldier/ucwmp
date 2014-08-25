@@ -152,11 +152,7 @@ static int backend_get_instances(struct cwmp_object *c_obj)
 		return 0;
 
 	backend_set_instance(c_obj->parent);
-	if (acs_object_get_instances(&api, obj->mgmt))
-		return -1;
-
-	data = obj->mgmt->instances;
-	if (!data)
+	if (acs_object_get_instances(&api, obj->mgmt, &data))
 		return -1;
 
 	if (blobmsg_type(data) != BLOBMSG_TYPE_ARRAY)
