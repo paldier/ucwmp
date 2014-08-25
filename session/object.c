@@ -285,15 +285,11 @@ static bool cwmp_object_param_write_only(struct cwmp_object *obj, int param)
 static int
 ___cwmp_param_set(struct cwmp_object *obj, const char *param, const char *value)
 {
-	struct cwmp_object_instance *in;
 	int i;
 
-	in = &obj->root_instance;
 	if (obj->get_instances) {
 		if (obj->cur_instance < 0)
 			return CWMP_ERROR_INVALID_PARAM;
-
-		in = &obj->instances[obj->cur_instance];
 	}
 
 	if (!obj->set_param)
