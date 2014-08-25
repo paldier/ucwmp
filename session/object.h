@@ -24,8 +24,6 @@ struct ubus_context;
 struct cwmp_object_instance {
 	const char *name;
 	int seq;
-
-	char **prev_values;
 };
 
 struct cwmp_param_cache {
