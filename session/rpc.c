@@ -628,12 +628,12 @@ int cwmp_session_init(struct rpc_data *data)
 	changed = cwmp_attr_cache_load();
 	node = roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:Inform", NULL);
 
-	roxml_add_node(node, 0, ROXML_ELM_NODE, "MaxEnvelopes", "1");
-	roxml_add_node(node, 0, ROXML_ELM_NODE, "RetryCount", "0");
-	soap_add_time(node, "CurrentTime", localtime(&now));
 	cwmp_add_device_id(node);
-	cwmp_add_inform_parameters(node);
 	cwmp_add_inform_events(node, changed);
+	roxml_add_node(node, 0, ROXML_ELM_NODE, "MaxEnvelopes", "1");
+	soap_add_time(node, "CurrentTime", localtime(&now));
+	roxml_add_node(node, 0, ROXML_ELM_NODE, "RetryCount", "0");
+	cwmp_add_inform_parameters(node);
 
 	return 0;
 }
