@@ -106,7 +106,6 @@ static void cwmp_add_cookies(struct uclient *cl)
 	if (!attr)
 		return;
 
-	uclient_http_reset_headers(cl);
 	uclient_http_set_header(cl, "Cookie", attr);
 	free(attr);
 }
@@ -161,6 +160,7 @@ static void __cwmp_send_request(struct uloop_timeout *t)
 		return;
 	}
 
+	uclient_http_reset_headers(uc);
 	uclient_http_set_request_type(uc, "POST");
 	cwmp_add_cookies(uc);
 
