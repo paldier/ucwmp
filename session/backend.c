@@ -148,8 +148,9 @@ static int backend_get_instances(struct cwmp_object *c_obj)
 	int n, rem;
 	int len = 0;
 
-	if (c_obj->instances)
-		return 0;
+	free(c_obj->instances);
+	c_obj->instances = NULL;
+	c_obj->cur_instance = -1;
 
 	backend_set_instance(c_obj->parent);
 	if (acs_object_get_instances(&api, obj->mgmt, &data))
