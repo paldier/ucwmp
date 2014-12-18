@@ -431,6 +431,7 @@ __cwmp_path_iterate_obj(struct path_iterate *it, struct cwmp_object *obj,
 		if (next)
 			continue;
 
+		cur->cur_instance = -1;
 		n += __cwmp_path_iterate(it, cur, ofs_cur, false);
 	}
 
