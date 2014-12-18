@@ -74,6 +74,7 @@ static int backend_get_param(struct cwmp_object *c_obj, int param, const char **
 {
 	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
 	struct blob_attr *attr;
+	static char valdata[32];
 
 	backend_set_instance(c_obj);
 	if (acs_param_get(&api, obj->params[param].mgmt, &attr)) {
@@ -82,10 +83,22 @@ static int backend_get_param(struct cwmp_object *c_obj, int param, const char **
 		return CWMP_ERROR_INTERNAL_ERROR;
 	}
 
-	if (!attr || blobmsg_type(attr) != BLOBMSG_TYPE_STRING)
-		*value = "";
-	else
+	valdata[0] = 0;
+	*value = valdata;
+	if (!attr)
+		return 0;
+
+	switch (blobmsg_type(attr)) {
+	case BLOBMSG_TYPE_STRING:
 		*value = blobmsg_data(attr);
+		break;
+	case BLOBMSG_TYPE_INT32:
+		snprintf(valdata, sizeof(valdata), "%d", blobmsg_get_u32(attr));
+		break;
+	case BLOBMSG_TYPE_BOOL:
+		*value = blobmsg_get_bool(attr) ? "true" : "false";
+		break;
+	}
 
 	cwmp_debug(1, "backend", "Object '%s' parameter '%s' get value '%s'\n",
 		   cwmp_object_name(c_obj), c_obj->params[param], *value);
