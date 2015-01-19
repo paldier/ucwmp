@@ -30,7 +30,8 @@
 	__digest_field(nonce) \
 	__digest_field(uri) \
 	__digest_field(response) \
-	__digest_field(cnonce)
+	__digest_field(cnonce) \
+	__digest_field(algorithm)
 
 #define __digest_fields_unquoted \
 	__digest_field(qop) \
