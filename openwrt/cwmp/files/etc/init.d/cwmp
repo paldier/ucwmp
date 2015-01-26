@@ -36,7 +36,7 @@ prepare_config() {
 			case "$field" in
 				Manufacturer) val="${DEVICE_MANUFACTURER:-OpenWrt}";;
 				Description|ModelName) val="$DEVICE_PRODUCT";;
-				SerialNumber) val="$(cat /sys/class/net/eth0/address)";;
+				SerialNumber) val="$(cat /sys/class/net/eth0/address | sed 's/://g')";;
 				ManufacturerOUI)
 					val="$MANUFACTURER_OUI"
 					[ -n "$val" ] || {
