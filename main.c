@@ -159,6 +159,9 @@ static void cwmp_exec_session(const char *event_data)
 		argv[argc++] = config.acs_info[2];
 	}
 
+	if (config.conn_req_port)
+		snprintf(port_str, sizeof(port_str), "%d", config.conn_req_port);
+
 	argv[argc++] = config.acs_info[0];
 	argv[argc] = NULL;
 	snprintf(debug_str, sizeof(debug_str), "%d", debug_level);
