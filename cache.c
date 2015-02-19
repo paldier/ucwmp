@@ -50,7 +50,7 @@ cwmp_object_get_seq(int *seq, const char *name, struct blob_attr *prev)
 	}
 
 out:
-	return (*seq)++;
+	return ++(*seq);
 }
 
 static void
