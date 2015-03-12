@@ -225,7 +225,7 @@ backend_add_parameters(struct backend_object *obj, const char **param_names,
 		obj->params[idx].mgmt = par;
 		if (!par->readonly)
 		    bitfield_set(writable, idx);
-		if (!par->hidden)
+		if (par->hidden)
 		    bitfield_set(write_only, idx);
 	}
 }
