@@ -145,8 +145,12 @@ static char *backend_fill_path(char *path, char *end, struct cwmp_object *c_obj)
 
 	path += snprintf(path, end - path, "%s.", cwmp_object_name(c_obj));
 
-	if (c_obj->get_instances && c_obj->cur_instance >= 0)
-		path += snprintf(path, end - path, "%d.", c_obj->cur_instance);
+	if (c_obj->get_instances && c_obj->cur_instance >= 0) {
+		struct cwmp_object_instance *in;
+
+		in = &c_obj->instances[c_obj->cur_instance];
+		path += snprintf(path, end - path, "%d.", in->seq);
+	}
 
 	return path;
 }
