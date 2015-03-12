@@ -213,7 +213,7 @@ static void backend_object_init(struct backend_object *obj)
 
 static void
 backend_add_parameters(struct backend_object *obj, const char **param_names,
-		       unsigned long *writable)
+		       unsigned long *writable, unsigned long *write_only)
 {
 	struct acs_object_param *par;
 
@@ -225,6 +225,8 @@ backend_add_parameters(struct backend_object *obj, const char **param_names,
 		obj->params[idx].mgmt = par;
 		if (!par->readonly)
 		    bitfield_set(writable, idx);
+		if (!par->hidden)
+		    bitfield_set(write_only, idx);
 	}
 }
 
@@ -237,6 +239,7 @@ static void __backend_create_object(struct cwmp_object *root, struct acs_object 
 	const char **param_names;
 	const char *name;
 	unsigned long *writable;
+	unsigned long *write_only;
 
 	parent = cwmp_object_path_create(root, acs_object_name(m_obj), &name);
 	if (!parent)
@@ -248,12 +251,14 @@ static void __backend_create_object(struct cwmp_object *root, struct acs_object 
 	obj = calloc_a(sizeof(*obj),
 		&params, m_obj->n_params * sizeof(*params),
 		&param_names, m_obj->n_params * sizeof(*param_names),
-		&writable, BITFIELD_SIZE(m_obj->n_params));
+		&writable, BITFIELD_SIZE(m_obj->n_params),
+		&write_only, BITFIELD_SIZE(m_obj->n_params));
 
 	obj->mgmt = m_obj;
 	obj->params = params;
 	obj->cwmp.writable = writable;
-	backend_add_parameters(obj, param_names, writable);
+	obj->cwmp.write_only = write_only;
+	backend_add_parameters(obj, param_names, writable, write_only);
 	backend_object_init(obj);
 	if (m_obj->get_instance_keys)
 		obj->cwmp.get_instances = backend_get_instances;
