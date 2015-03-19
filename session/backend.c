@@ -14,6 +14,8 @@
 #include <libacs/client.h>
 #include <libubox/blobmsg_json.h>
 
+#include <inttypes.h>
+
 #include "soap.h"
 #include "object.h"
 
@@ -94,6 +96,9 @@ static int backend_get_param(struct cwmp_object *c_obj, int param, const char **
 		break;
 	case BLOBMSG_TYPE_INT32:
 		snprintf(valdata, sizeof(valdata), "%d", blobmsg_get_u32(attr));
+		break;
+	case BLOBMSG_TYPE_INT64:
+		snprintf(valdata, sizeof(valdata), "%"PRId64, blobmsg_get_u64(attr));
 		break;
 	case BLOBMSG_TYPE_BOOL:
 		*value = blobmsg_get_bool(attr) ? "true" : "false";
