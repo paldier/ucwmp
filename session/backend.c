@@ -256,8 +256,8 @@ static void __backend_create_object(struct cwmp_object *root, struct acs_object 
 	obj = calloc_a(sizeof(*obj),
 		&params, m_obj->n_params * sizeof(*params),
 		&param_names, m_obj->n_params * sizeof(*param_names),
-		&writable, BITFIELD_SIZE(m_obj->n_params),
-		&write_only, BITFIELD_SIZE(m_obj->n_params));
+		&writable, BITFIELD_SIZE(m_obj->n_params) * sizeof(*writable),
+		&write_only, BITFIELD_SIZE(m_obj->n_params) * sizeof(*write_only));
 
 	obj->mgmt = m_obj;
 	obj->params = params;
