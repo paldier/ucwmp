@@ -18,6 +18,7 @@
 #include <libubox/utils.h>
 
 #include "rpc.h"
+#include "utils.h"
 
 struct ubus_context;
 
