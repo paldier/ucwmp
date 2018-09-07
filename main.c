@@ -27,7 +27,6 @@
 #include "state.h"
 
 #ifdef DUMMY_MODE
-#define CWMP_MODEL_DIR "./model"
 #define CWMP_ETC_DIR "./etc"
 #define CWMP_CONFIG_DIR	CWMP_ETC_DIR "/config"
 #define CWMP_SESSION_BIN "./cwmp-session"
@@ -36,17 +35,14 @@
 #define CWMP_CONFIG_DIR	NULL /* UCI default */
 #define CWMP_ETC_DIR "/etc"
 #define CWMP_SESSION_BIN "cwmp-session"
-#define CWMP_MODEL_DIR CWMP_ETC_DIR "/model"
 #define CWMP_SCRIPT_DIR "/usr/share/cwmp/scripts"
 #endif
 
-#define CWMP_INFO_FILE	CWMP_ETC_DIR "/cwmp-device.json"
 #define CWMP_CACHE_FILE	CWMP_ETC_DIR "/cwmp-cache.json"
 #define CWMP_STARTUP_FILE	CWMP_ETC_DIR "/cwmp-startup.json"
 
 static struct uci_context *uci_ctx;
 static const char *session_path = CWMP_SESSION_BIN;
-static const char *devinfo_path = CWMP_INFO_FILE;
 static const char *config_path = CWMP_CONFIG_DIR;
 static const char *cache_file = CWMP_CACHE_FILE;
 
@@ -108,10 +104,6 @@ static void __cwmp_save_cache(struct uloop_timeout *timeout)
 	cwmp_state_get_downloads(&b);
 	blobmsg_close_array(&b, c);
 
-	c = blobmsg_open_table(&b, "objects");
-	cwmp_object_cache_dump(&b);
-	blobmsg_close_table(&b, c);
-
 	str = blobmsg_format_json(b.head, true);
 	if (debug_level)
 		fprintf(stderr, "Updated cache: %s\n", str);
@@ -140,15 +132,11 @@ static void cwmp_exec_session(const char *event_data)
 		debug_str,
 		"-e",
 		event_data,
-		"-I",
-		devinfo_path,
-		"-m",
-		CWMP_MODEL_DIR "/*.json",
 		"-P",
 		port_str,
 		NULL
 	};
-	int argc = 9;
+	int argc = 7;
 
 	if (config.acs_info[1]) {
 		argv[argc++] = "-u";
@@ -411,7 +399,6 @@ static int usage(const char *prog)
 	fprintf(stderr, "Usage: %s <options>\n"
 		"Options:\n"
 		"	-c <path>       Path to UCI config file (default: %s)\n"
-		"	-I <file>       Device information file (default: " CWMP_INFO_FILE ")\n"
 		"	-E <file>       CWMP cache storage file (default: " CWMP_CACHE_FILE ")\n"
 		"	-d              Increase debug level\n"
 		"	-s <path>       Path to session tool\n"
@@ -434,14 +421,12 @@ static void cwmp_load_cache(const char *filename)
 		CACHE_URL,
 		CACHE_EVENTS,
 		CACHE_DOWNLOADS,
-		CACHE_OBJECTS,
 		__CACHE_MAX,
 	};
 	static const struct blobmsg_policy policy[__CACHE_MAX] = {
 		[CACHE_URL] = { "acs_url", BLOBMSG_TYPE_STRING },
 		[CACHE_EVENTS] = { "events", BLOBMSG_TYPE_ARRAY },
-		[CACHE_DOWNLOADS] = { "downloads", BLOBMSG_TYPE_ARRAY },
-		[CACHE_OBJECTS] = { "objects", BLOBMSG_TYPE_TABLE },
+		[CACHE_DOWNLOADS] = { "downloads", BLOBMSG_TYPE_ARRAY }
 	};
 	struct blob_attr *tb[__CACHE_MAX], *cur;
 	struct stat st;
@@ -460,9 +445,6 @@ static void cwmp_load_cache(const char *filename)
 
 	if ((cur = tb[CACHE_DOWNLOADS]))
 		cwmp_add_downloads(cur);
-
-	if ((cur = tb[CACHE_OBJECTS]))
-		cwmp_object_cache_load(cur);
 
 	if (config.acs_info[0]) {
 		cur = tb[CACHE_URL];
@@ -508,13 +490,10 @@ int main(int argc, char **argv)
 
 	uci_ctx = uci_alloc_context();
 
-	while ((ch = getopt(argc, argv, "c:dE:I:s:")) != -1) {
+	while ((ch = getopt(argc, argv, "c:dE:s:")) != -1) {
 		switch(ch) {
 		case 'c':
 			config_path = optarg;
-			break;
-		case 'I':
-			devinfo_path = optarg;
 			break;
 		case 'E':
 			cache_file = optarg;

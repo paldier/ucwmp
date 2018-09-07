@@ -21,7 +21,8 @@ define Package/ucwmp
   CATEGORY:=Network
   TITLE:=Tiny CWMP (TR-069) client
   ABI_VERSION:=$(PKG_VERSION)
-  DEPENDS:=+libubox +libacs +libacs-server +libacs-data-tr-098 +uhttpd +libroxml +libuci +libuclient +uclient-fetch
+  DEPENDS:=+libubox +uhttpd +libroxml +libuci +libuclient +uclient-fetch \
+ +scal-plugin-json
 endef
 
 define Package/ucwmp/conffiles

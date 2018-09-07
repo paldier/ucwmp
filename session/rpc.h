@@ -73,7 +73,6 @@ int cwmp_session_init(struct rpc_data *data);
 int cwmp_session_response(struct rpc_data *data);
 void cwmp_session_continue(struct rpc_data *data);
 
-void cwmp_add_device_id(node_t *node);
 void server_load_info(const char *filename);
 void server_update_local_addr(const char *addr, const char *port);
 void cwmp_update_url(const char *url, const char *auth_str);

@@ -25,7 +25,7 @@
 #include "soap.h"
 #include "rpc.h"
 #include "attr.h"
-#include "object.h"
+#include "backend.h"
 
 bool session_init = true;
 
@@ -292,9 +292,7 @@ static int usage(const char *progname)
 {
 	fprintf(stderr, "Usage: %s [options] <url>\n"
 		"Options:\n"
-		"	-I <file>:      Load device info from <file>\n"
 		"	-e <json>:      Load events from JSON string\n"
-		"	-m <path>:      Load object definitions from directory <path>\n"
 		"	-a <file>:	Set attribute cache filename to <file>\n"
 		"	-d <level>:     Set debug level\n"
 		"	-u <username>:  Set ACS username\n"
@@ -334,7 +332,7 @@ int main(int argc, char **argv)
 
 	uloop_init();
 
-	while ((ch = getopt(argc, argv, "a:d:I:e:m:u:p:P:")) != -1) {
+	while ((ch = getopt(argc, argv, "a:d:e:u:p:P:")) != -1) {
 		switch (ch) {
 		case 'a':
 			attr_cache_file = optarg;
@@ -342,15 +340,9 @@ int main(int argc, char **argv)
 		case 'd':
 			debug_level = atoi(optarg);
 			break;
-		case 'I':
-			server_load_info(optarg);
-			break;
 		case 'e':
 			if (load_events(optarg))
 				return 1;
-			break;
-		case 'm':
-			cwmp_backend_load_data(optarg);
 			break;
 		case 'u':
 			username = optarg;
@@ -373,8 +365,6 @@ int main(int argc, char **argv)
 	if (argc != 1)
 		return usage(progname);
 
-	cwmp_backend_add_objects();
-
 	url = argv[0];
 	session_init = false;
 
@@ -389,6 +379,6 @@ int main(int argc, char **argv)
 
 	uloop_run();
 	uloop_done();
-
+	backend_deinit();
 	return 0;
 }

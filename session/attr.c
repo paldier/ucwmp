@@ -39,6 +39,8 @@ static bool cwmp_attr_is_default(struct param_attr *attr)
 
 struct param_attr *cwmp_attr_cache_get(const char *name, bool temp)
 {
+	return NULL;
+#if 0
 	static struct param_attr temp_attr;
 	struct param_attr *attr;
 	const char *value, *type;
@@ -46,6 +48,7 @@ struct param_attr *cwmp_attr_cache_get(const char *name, bool temp)
 	attr = avl_find_element(&attr_cache, name, attr, node);
 	if (attr)
 		return attr;
+
 
 	value = cwmp_param_get(name, &type);
 	if (!value)
@@ -73,6 +76,7 @@ struct param_attr *cwmp_attr_cache_get(const char *name, bool temp)
 		avl_insert(&attr_cache, &attr->node);
 
 	return attr;
+#endif
 }
 
 static bool cwmp_attr_cache_parse(struct blob_attr *data)

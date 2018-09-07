@@ -11,278 +11,167 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#include <libacs/client.h>
-#include <libubox/blobmsg_json.h>
-
-#include <inttypes.h>
-
-#include "soap.h"
+#include "backend.h"
+#include "scal.h"
 #include "object.h"
 
-static struct acs_api api;
-static bool need_validate;
-static struct blob_buf vars;
-
-struct backend_param {
-	struct acs_object_param *mgmt;
-};
-
-struct backend_object {
-	struct cwmp_object cwmp;
-	struct acs_object *mgmt;
-	struct backend_param *params;
-};
+static struct scal_ctx scal;
 
 void server_update_local_addr(const char *addr, const char *port)
 {
-	blobmsg_printf(&vars, "cwmp_local_addr", "%s:%s", addr, port);
-	acs_set_script_data(&api, vars.head);
+	//blobmsg_printf(&vars, "cwmp_local_addr", "%s:%s", addr, port);
+	//acs_set_script_data(&api, vars.head);
 }
 
-void cwmp_backend_init(struct ubus_context *ubus_ctx)
+void backend_init(struct ubus_context *ubus_ctx)
 {
-	blob_buf_init(&vars, 0);
-	acs_api_init(&api);
-	acs_set_ubus_context(&api, ubus_ctx);
+	scal_init(&scal, ubus_ctx);
+	scal_set_module(&scal, "tr-181");
 }
 
-void cwmp_backend_load_data(const char *path)
+void backend_deinit()
 {
-	acs_api_load_module(&api, "tr-098");
+	scal_deinit(&scal);
 }
 
-static void backend_set_instance(struct cwmp_object *c_obj)
+static void add_parameters(struct cwmp_iterator *it,
+				const char *path,
+				struct blob_attr *params)
 {
-	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
-	struct cwmp_object_instance *in;
+	union cwmp_any u = {};
+	struct blob_attr *p;
+	int rem;
+	char buf[CWMP_PATH_LEN];
+	char *cur;
 
-	if (!c_obj)
-		return;
+	printf("add params: %s\n", path);
 
-	backend_set_instance(c_obj->parent);
+	u.param.path = buf;
+	cur = buf + sprintf(buf, "%s.", path);
 
-	if (!c_obj->instances)
-		return;
+	blobmsg_for_each_attr(p, params, rem) {
+		const struct blobmsg_hdr *hdr = blob_data(p);
+		const char *name = (char *)hdr->name;
+		struct blob_attr *rd_only = get_blob(p, "readonly");;
 
-	if (c_obj->cur_instance < 0)
-		return;
+		printf("add param: %s\n", name);
+		strcpy(cur, name);
+		u.param.name = name;
 
-	in = &c_obj->instances[c_obj->cur_instance];
-	acs_object_set_instance(&api, obj->mgmt, in->name);
-	cwmp_debug(1, "backend", "Object '%s' set instance '%s'\n", cwmp_object_name(c_obj), in->name);
+		if (rd_only)
+			u.param.writeable = !blobmsg_get_u8(rd_only);
+		else
+			u.param.writeable = false;
+
+		it->cb(it, &u);
+		it->cb_call_cnt++;
+	}
 }
 
-static int backend_get_param(struct cwmp_object *c_obj, int param, const char **value)
+static void add_instances(struct cwmp_iterator *it,
+			const char *path,
+			struct blob_attr *instances,
+			struct blob_attr *params)
 {
-	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
-	struct blob_attr *attr;
-	static char valdata[32];
+	char i_path[CWMP_PATH_LEN];
+	struct blob_attr *i;
+	char *cur = i_path + snprintf(i_path, sizeof(i_path), "%s.", path);
+	int rem;
 
-	backend_set_instance(c_obj);
-	if (acs_param_get(&api, obj->params[param].mgmt, &attr)) {
-		cwmp_debug(1, "backend", "Object '%s' parameter '%s' not found\n",
-			   cwmp_object_name(c_obj), c_obj->params[param]);
-		return CWMP_ERROR_INTERNAL_ERROR;
+	printf("add insts: %s\n", i_path);
+	blobmsg_for_each_attr(i, instances, rem) {
+		const struct blobmsg_hdr *hdr = blob_data(i);
+		const char *i_name = (char *)hdr->name;
+
+		strcpy(cur, i_name);
+		printf("add inst: %s\n", i_path);
+		add_parameters(it, i_path, params);
+	}
+}
+
+int backend_get_parameter_names(struct cwmp_iterator *it, bool next_level)
+{
+	struct blob_attr *objs = NULL;
+	struct blob_attr *params = NULL;
+	struct blob_attr *obj;
+	int rem;
+	bool multi_inst_obj = false;
+
+	printf("get param names: %s next level %d\n", it->path, next_level);
+
+	scal_info(&scal, it->path, &params, &multi_inst_obj);
+	if (params) {
+		if (multi_inst_obj) {
+			struct blob_attr *instances = NULL;
+
+			scal_list(&scal, it->path, &instances);
+			if (instances) {
+				add_instances(it, it->path, instances, params);
+				free(instances);
+				instances = NULL;
+			}
+		} else {
+			add_parameters(it, it->path, params);
+		}
+		free(params);
+		params = NULL;
 	}
 
-	valdata[0] = 0;
-	*value = valdata;
-	if (!attr)
+	if (next_level == false)
+		return it->cb_call_cnt;
+
+	scal_list(&scal, it->path, &objs);
+	if (objs == NULL)
 		return 0;
 
-	switch (blobmsg_type(attr)) {
-	case BLOBMSG_TYPE_STRING:
-		*value = blobmsg_data(attr);
-		break;
-	case BLOBMSG_TYPE_INT32:
-		snprintf(valdata, sizeof(valdata), "%d", blobmsg_get_u32(attr));
-		break;
-	case BLOBMSG_TYPE_INT64:
-		snprintf(valdata, sizeof(valdata), "%"PRId64, blobmsg_get_u64(attr));
-		break;
-	case BLOBMSG_TYPE_BOOL:
-		*value = blobmsg_get_bool(attr) ? "true" : "false";
-		break;
+	blobmsg_for_each_attr(obj, objs, rem) {
+		char path[CWMP_PATH_LEN + 4];
+		const struct blobmsg_hdr *hdr = blob_data(obj);
+		const char *obj_name = (char *)hdr->name;
+
+		snprintf(path, sizeof(path), "%s.%s", it->path, obj_name);
+		scal_info(&scal, path, &params, NULL);
+
+		if (get_blob(obj, "multi_instance")) {
+			struct blob_attr *instances = NULL;
+
+			scal_list(&scal, path, &instances);
+			if (instances && params)
+				add_instances(it, path, instances, params);
+			if (instances) {
+				free(instances);
+				instances = NULL;
+			}
+		} else {
+			if (params)
+				add_parameters(it, path, params);
+		}
+
+		if (params) {
+			free(params);
+			params = NULL;
+		}
 	}
-
-	cwmp_debug(1, "backend", "Object '%s' parameter '%s' get value '%s'\n",
-		   cwmp_object_name(c_obj), c_obj->params[param], *value);
-
-	return 0;
+	free(objs);
+	return it->cb_call_cnt;
 }
 
-static int backend_set_param(struct cwmp_object *c_obj, int param, const char *value)
+int backend_get_parameter_value(struct cwmp_iterator *it)
 {
-	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
-
-	backend_set_instance(c_obj);
-	if (acs_param_set(&api, obj->params[param].mgmt, value)) {
-		cwmp_debug(1, "backend", "Object '%s' parameter '%s' not found\n",
-			   cwmp_object_name(c_obj), c_obj->params[param]);
-		return CWMP_ERROR_INTERNAL_ERROR;
-	}
-
-	cwmp_debug(1, "backend", "Object '%s' parameter '%s' set value to '%s'\n",
-		   cwmp_object_name(c_obj), c_obj->params[param], value);
-
-	need_validate = true;
-	return 0;
+	return scal_get(&scal, it);
 }
 
-static int backend_validate(struct cwmp_object *c_obj)
+int backend_set_parameter_value(const char *path, const char *value)
 {
-	if (!need_validate)
-		return 0;
-
-	need_validate = false;
-	return acs_validate(&api);
+	return scal_set(&scal, path, value);
 }
 
-static int backend_commit(struct cwmp_object *c_obj)
+int backend_commit()
 {
-	return acs_commit(&api);
-}
+	int rc = scal_validate(&scal);
 
-static char *backend_fill_path(char *path, char *end, struct cwmp_object *c_obj)
-{
-	if (c_obj->parent)
-		path = backend_fill_path(path, end, c_obj->parent);
+	if (rc != -1)
+		rc = scal_commit(&scal);
 
-	path += snprintf(path, end - path, "%s.", cwmp_object_name(c_obj));
-
-	if (c_obj->get_instances && c_obj->cur_instance >= 0) {
-		struct cwmp_object_instance *in;
-
-		in = &c_obj->instances[c_obj->cur_instance];
-		path += snprintf(path, end - path, "%d.", in->seq);
-	}
-
-	return path;
-}
-
-static int backend_get_instances(struct cwmp_object *c_obj)
-{
-	struct backend_object *obj = container_of(c_obj, struct backend_object, cwmp);
-	struct cwmp_object_instance *in;
-	struct blob_attr *data, *cur;
-	char path[CWMP_PATH_LEN];
-	char *buf;
-	int n, rem;
-	int len = 0;
-
-	free(c_obj->instances);
-	c_obj->instances = NULL;
-	c_obj->cur_instance = -1;
-
-	backend_set_instance(c_obj->parent);
-	if (acs_object_get_instances(&api, obj->mgmt, &data))
-		return -1;
-
-	if (blobmsg_type(data) != BLOBMSG_TYPE_ARRAY)
-		return -1;
-
-	path[0] = 0;
-	backend_fill_path(path, path + sizeof(path), c_obj);
-	data = cwmp_get_cache_instances(path, data);
-	if (!data)
-		return -1;
-
-	n = blobmsg_check_array(data, BLOBMSG_TYPE_INT32);
-	if (n <= 0)
-		return -1;
-
-	blobmsg_for_each_attr(cur, data, rem)
-		len += strlen(blobmsg_name(cur)) + 1;
-
-	in = calloc_a(n * sizeof(*in), &buf, len);
-	c_obj->instances = in;
-	c_obj->n_instances = 0;
-	blobmsg_for_each_attr(cur, data, rem) {
-		in->name = strcpy(buf, blobmsg_name(cur));
-		in->seq = blobmsg_get_u32(cur);
-		buf += strlen(buf) + 1;
-		in++;
-		c_obj->n_instances++;
-	}
-
-	return 0;
-}
-
-static void backend_object_init(struct backend_object *obj)
-{
-	obj->cwmp.get_param = backend_get_param;
-	obj->cwmp.set_param = backend_set_param;
-	obj->cwmp.validate = backend_validate;
-	obj->cwmp.commit = backend_commit;
-}
-
-static void
-backend_add_parameters(struct backend_object *obj, const char **param_names,
-		       unsigned long *writable, unsigned long *write_only)
-{
-	struct acs_object_param *par;
-
-	obj->cwmp.params = param_names;
-	avl_for_each_element(&obj->mgmt->params, par, avl) {
-		int idx = obj->cwmp.n_params++;
-
-		param_names[idx] = acs_object_param_name(par);
-		obj->params[idx].mgmt = par;
-		if (!par->readonly)
-		    bitfield_set(writable, idx);
-		if (par->hidden)
-		    bitfield_set(write_only, idx);
-	}
-}
-
-static void __backend_create_object(struct cwmp_object *root, struct acs_object *m_obj)
-{
-	struct acs_object *m_obj_cur;
-	struct cwmp_object *parent;
-	struct backend_object *obj;
-	struct backend_param *params;
-	const char **param_names;
-	const char *name;
-	unsigned long *writable;
-	unsigned long *write_only;
-
-	parent = cwmp_object_path_create(root, acs_object_name(m_obj), &name);
-	if (!parent)
-		return;
-
-	if (avl_find(&parent->objects, name))
-		return;
-
-	obj = calloc_a(sizeof(*obj),
-		&params, m_obj->n_params * sizeof(*params),
-		&param_names, m_obj->n_params * sizeof(*param_names),
-		&writable, BITFIELD_SIZE(m_obj->n_params) * sizeof(*writable),
-		&write_only, BITFIELD_SIZE(m_obj->n_params) * sizeof(*write_only));
-
-	obj->mgmt = m_obj;
-	obj->params = params;
-	obj->cwmp.writable = writable;
-	obj->cwmp.write_only = write_only;
-	backend_add_parameters(obj, param_names, writable, write_only);
-	backend_object_init(obj);
-	if (m_obj->get_instance_keys)
-		obj->cwmp.get_instances = backend_get_instances;
-
-	cwmp_object_add(&obj->cwmp, name, parent);
-
-	avl_for_each_element(&m_obj->objects, m_obj_cur, avl)
-		__backend_create_object(&obj->cwmp, m_obj_cur);
-}
-
-static void backend_create_object(struct acs_object *m_obj)
-{
-	__backend_create_object(&root_object, m_obj);
-}
-
-void cwmp_backend_add_objects(void)
-{
-	struct acs_object *obj;
-
-	avl_for_each_element(&api.objects, obj, avl)
-		backend_create_object(obj);
+	return rc;
 }

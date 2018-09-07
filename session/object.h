@@ -95,6 +95,6 @@ bool cwmp_object_param_writable(struct cwmp_object *obj, int param);
 
 void cwmp_backend_init(struct ubus_context *ubus_ctx);
 void cwmp_backend_add_objects(void);
-void cwmp_backend_load_data(const char *path);
+void cwmp_get_parameter(void);
 
 #endif
