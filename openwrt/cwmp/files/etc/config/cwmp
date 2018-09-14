@@ -1,10 +1,9 @@
 config cwmp
-	option periodic_enabled '1'
-	option periodic_interval '1800'
+	option url 'http://172.27.0.209:8080/openacs/acs'
 	option connection_port '8080'
-
-	option Manufacturer ''
-	option ModelName ''
-	option Description ''
-	option ProductClass 'Router'
-	option HardwareVersion ''
+	option local_username '_user'
+	option local_password '_password'
+	option username 'admin'
+	option password 'openacs'
+	option periodic_interval '300'
+	option periodic_enabled '1'
