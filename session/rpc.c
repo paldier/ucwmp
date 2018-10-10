@@ -650,7 +650,7 @@ static void cwmp_add_device_id(node_t *node)
 	struct cwmp_iterator it;
 	static const char *devid_params[] = {
 		"Manufacturer",
-		"OUI",
+		"ManufacturerOUI",
 		"ProductClass",
 		"SerialNumber"
 	};
