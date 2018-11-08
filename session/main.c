@@ -20,7 +20,9 @@
 #include <libubox/uclient.h>
 #include <libubox/blobmsg.h>
 #include <libubox/blobmsg_json.h>
+#include <libubox/ustream-ssl.h>
 #include <json-c/json.h>
+#include <dlfcn.h>
 
 #include "soap.h"
 #include "rpc.h"
@@ -30,12 +32,15 @@
 bool session_init = true;
 
 static int debug_level = 0;
-static struct uclient *uc;
 static char *buf;
 static int buf_len, buf_ofs;
 
-static char *cur_request;
+static struct uclient *uc;
+static struct ustream_ssl_ctx *ssl_ctx;
+static const struct ustream_ssl_ops *ssl_ops;
+static void *dlh;
 
+static char *cur_request;
 static char *url, *username, *password, *local_port = "8080";
 
 static LIST_HEAD(cookies);
@@ -255,6 +260,27 @@ static void cwmp_error(struct uclient *cl, int code)
 	uloop_end();
 }
 
+static void init_ustream_ssl()
+{
+	dlh = dlopen("libustream-ssl.so", RTLD_LAZY | RTLD_LOCAL);
+	if (!dlh)
+		return;
+
+	ssl_ops = dlsym(dlh, "ustream_ssl_ops");
+	if (!ssl_ops)
+		return;
+
+	ssl_ctx = ssl_ops->context_new(false);
+}
+
+static void deinit_ustream_ssl()
+{
+	if (ssl_ctx)
+		ssl_ops->context_free(ssl_ctx);
+	if (dlh)
+		dlclose(dlh);
+}
+
 static int cwmp_connect(void)
 {
 	static struct uclient_cb cwmp_cb = {
@@ -263,6 +289,7 @@ static int cwmp_connect(void)
 		.error = cwmp_error,
 	};
 	char *auth_str;
+	int err;
 
 	if (uc)
 		return -1;
@@ -278,13 +305,16 @@ static int cwmp_connect(void)
 
 	if (debug_level)
 		fprintf(stderr, "Connecting to %s\n", url);
+
 	uc = uclient_new(url, auth_str, &cwmp_cb);
-	if (uclient_connect(uc)) {
+	uclient_http_set_ssl_ctx(uc, ssl_ops, ssl_ctx, 0);
+	err = uclient_connect(uc);
+	if (err) {
 		if (debug_level)
-			perror("Failed to connect to CPE");
+			fprintf(stderr, "Failed to connect to CPE: %s: %s\n",
+				uclient_strerror(err), strerror(errno));
 		return -1;
 	}
-
 	return 0;
 }
 
@@ -367,6 +397,7 @@ int main(int argc, char **argv)
 
 	url = argv[0];
 	session_init = false;
+	init_ustream_ssl();
 
 	if (cwmp_connect())
 		return 1;
@@ -380,5 +411,6 @@ int main(int argc, char **argv)
 	uloop_run();
 	uloop_done();
 	backend_deinit();
+	deinit_ustream_ssl();
 	return 0;
 }
