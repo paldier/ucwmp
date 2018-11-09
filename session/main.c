@@ -220,7 +220,8 @@ static void cwmp_data_eof(struct uclient *cl)
 	static int retries, auth_retries;
 	char *msg = buf;
 
-	buf[buf_ofs] = 0;
+	if (buf)
+		buf[buf_ofs] = 0;
 
 	if (retries < 7 && uclient_http_redirect(cl)) {
 		retries++;
