@@ -44,8 +44,6 @@ static void add_parameters(struct cwmp_iterator *it,
 	char buf[CWMP_PATH_LEN];
 	char *cur;
 
-	printf("add params: %s\n", path);
-
 	u.param.path = buf;
 	cur = buf + sprintf(buf, "%s.", path);
 
@@ -54,7 +52,6 @@ static void add_parameters(struct cwmp_iterator *it,
 		const char *name = (char *)hdr->name;
 		struct blob_attr *rd_only = get_blob(p, "readonly");;
 
-		printf("add param: %s\n", name);
 		strcpy(cur, name);
 		u.param.name = name;
 
@@ -78,23 +75,61 @@ static void add_instances(struct cwmp_iterator *it,
 	char *cur = i_path + snprintf(i_path, sizeof(i_path), "%s.", path);
 	int rem;
 
-	printf("add insts: %s\n", i_path);
 	blobmsg_for_each_attr(i, instances, rem) {
 		const struct blobmsg_hdr *hdr = blob_data(i);
 		const char *i_name = (char *)hdr->name;
 
 		strcpy(cur, i_name);
-		printf("add inst: %s\n", i_path);
 		add_parameters(it, i_path, params);
 	}
 }
 
-int backend_get_parameter_names(struct cwmp_iterator *it, bool next_level)
+static void get_parameter_names_rec(struct cwmp_iterator *it, char *path)
 {
 	struct blob_attr *objs = NULL;
 	struct blob_attr *params = NULL;
 	struct blob_attr *obj;
 	int rem;
+
+	scal_list(&scal, path, &objs);
+	if (objs == NULL)
+		return;
+
+	blobmsg_for_each_attr(obj, objs, rem) {
+		char sub_path[CWMP_PATH_LEN + 4];
+		const struct blobmsg_hdr *hdr = blob_data(obj);
+		const char *obj_name = (char *)hdr->name;
+
+		snprintf(sub_path, sizeof(sub_path), "%s.%s", path, obj_name);
+		scal_info(&scal, sub_path, &params, NULL);
+
+		if (get_blob(obj, "multi_instance")) {
+			struct blob_attr *instances = NULL;
+
+			scal_list(&scal, sub_path, &instances);
+			if (instances && params)
+				add_instances(it, sub_path, instances, params);
+			if (instances) {
+				free(instances);
+				instances = NULL;
+			}
+		} else {
+			if (params)
+				add_parameters(it, sub_path, params);
+		}
+
+		if (params) {
+			free(params);
+			params = NULL;
+		}
+		get_parameter_names_rec(it, sub_path);
+	}
+	free(objs);
+}
+
+int backend_get_parameter_names(struct cwmp_iterator *it, bool next_level)
+{
+	struct blob_attr *params = NULL;
 	bool multi_inst_obj = false;
 
 	printf("get param names: %s next level %d\n", it->path, next_level);
@@ -117,42 +152,10 @@ int backend_get_parameter_names(struct cwmp_iterator *it, bool next_level)
 		params = NULL;
 	}
 
-	if (next_level == false)
+	if (next_level == true)
 		return it->cb_call_cnt;
 
-	scal_list(&scal, it->path, &objs);
-	if (objs == NULL)
-		return 0;
-
-	blobmsg_for_each_attr(obj, objs, rem) {
-		char path[CWMP_PATH_LEN + 4];
-		const struct blobmsg_hdr *hdr = blob_data(obj);
-		const char *obj_name = (char *)hdr->name;
-
-		snprintf(path, sizeof(path), "%s.%s", it->path, obj_name);
-		scal_info(&scal, path, &params, NULL);
-
-		if (get_blob(obj, "multi_instance")) {
-			struct blob_attr *instances = NULL;
-
-			scal_list(&scal, path, &instances);
-			if (instances && params)
-				add_instances(it, path, instances, params);
-			if (instances) {
-				free(instances);
-				instances = NULL;
-			}
-		} else {
-			if (params)
-				add_parameters(it, path, params);
-		}
-
-		if (params) {
-			free(params);
-			params = NULL;
-		}
-	}
-	free(objs);
+	get_parameter_names_rec(it, it->path);
 	return it->cb_call_cnt;
 }
 
