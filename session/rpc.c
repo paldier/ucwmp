@@ -566,7 +566,6 @@ static void cwmp_add_inform_parameters(node_t *node)
 	}
 
 	n += cwmp_attr_cache_add_changed(node);
-
 	cwmp_close_array(node, n, "ParameterValueStruct");
 }
 

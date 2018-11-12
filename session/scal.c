@@ -12,6 +12,7 @@ struct scal_get_req {
 	struct cwmp_iterator *it;
 	char path[CWMP_PATH_LEN];
 	char name[CWMP_PATH_LEN];
+	unsigned success;
 };
 
 struct copy_cb_args {
@@ -178,7 +179,10 @@ static void scal_get_cb(struct ubus_request *req,
 		u.param.name = r->name;
 		u.param.value = blob_any_to_string(val, buf, sizeof(buf),
 						&u.param.type);
-		r->it->cb(r->it, &u);
+		if (u.param.value) {
+			r->it->cb(r->it, &u);
+			r->success = 1;
+		}
 	} else {
 		err("missing 'value' field in response for '%s.%s'\n",
 			r->path, r->name);
@@ -215,6 +219,7 @@ static int scal_get_req_init(struct scal_get_req *r, struct cwmp_iterator *it)
 		return -1;
 
 	r->it = it;
+	r->success = 0;
 	return 0;
 }
 
@@ -238,7 +243,7 @@ int scal_get(struct scal_ctx *ctx, struct cwmp_iterator *it)
 			ctx->ubus_path, "get", req.path, req.name);
 		ctx->prepared = 0;
 	}
-	return !err;
+	return req.success;
 }
 
 int scal_set(struct scal_ctx *ctx, const char *full_path, const char *value)
