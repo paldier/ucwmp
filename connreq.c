@@ -136,7 +136,7 @@ static bool digest_parse_fields(char *str, char **tb)
 	}
 
 	for (idx = 0; idx < __DIGEST_FIELDS; idx++)
-		if (!tb[idx])
+		if (!tb[idx] && idx != DIGEST_algorithm)
 			return false;
 
 	return true;
