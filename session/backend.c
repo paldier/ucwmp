@@ -127,12 +127,12 @@ static void get_parameter_names_rec(struct cwmp_iterator *it, char *path)
 	free(objs);
 }
 
-int backend_get_parameter_names(struct cwmp_iterator *it, bool next_level)
+int backend_get_parameter_names(struct cwmp_iterator *it, bool nxt_lvl)
 {
 	struct blob_attr *params = NULL;
 	bool multi_inst_obj = false;
 
-	printf("get param names: %s next level %d\n", it->path, next_level);
+	printf("get param names: %s next level %d\n", it->path, nxt_lvl);
 
 	scal_info(&scal, it->path, &params, &multi_inst_obj);
 	if (params) {
@@ -152,16 +152,69 @@ int backend_get_parameter_names(struct cwmp_iterator *it, bool next_level)
 		params = NULL;
 	}
 
-	if (next_level == true)
+	if (nxt_lvl == true)
 		return it->cb_call_cnt;
 
 	get_parameter_names_rec(it, it->path);
 	return it->cb_call_cnt;
 }
 
-int backend_get_parameter_value(struct cwmp_iterator *it)
+static int _get_parameter_values(struct cwmp_iterator *it,
+				struct blob_attr *params)
 {
-	return scal_get(&scal, it);
+	struct blob_attr *p;
+	int rc = 0;
+	int len;
+	int rem;
+
+	len = strlen(it->path);
+	it->path[len++] = '.';
+
+	blobmsg_for_each_attr(p, params, rem) {
+		strcpy(&it->path[len], blobmsg_name(p));
+		rc += scal_get(&scal, it);
+	}
+	return rc;
+}
+
+static int get_parameter_values(struct cwmp_iterator *it)
+{
+	struct blob_attr *params = NULL;
+	int rc = 0;
+	int rem;
+	unsigned len;
+	bool multi_inst_obj = false;
+
+	scal_info(&scal, it->path, &params, &multi_inst_obj);
+
+	if (multi_inst_obj) {
+		struct blob_attr *instances;
+		struct blob_attr *i;
+
+		scal_list(&scal, it->path, &instances);
+		len = strlen(it->path);
+		it->path[len++] = '.';
+
+		blobmsg_for_each_attr(i, instances, rem) {
+			strcpy(&it->path[len], blobmsg_name(i));
+			rc += _get_parameter_values(it, params);
+		}
+	} else {
+		rc = _get_parameter_values(it, params);
+	}
+	return rc;
+}
+
+int backend_get_parameter_value(struct cwmp_iterator *it, bool nxt_lvl)
+{
+	int rc;
+
+	if (nxt_lvl)
+		rc = get_parameter_values(it);
+	else
+		rc = scal_get(&scal, it);
+
+	return rc;
 }
 
 int backend_set_parameter_value(const char *path, const char *value)

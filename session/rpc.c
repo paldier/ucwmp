@@ -67,16 +67,37 @@ static void add_parameter_value(struct cwmp_iterator *it, union cwmp_any *a)
 	cwmp_add_parameter_value_struct(it->node, it->path, p->value, p->type);
 }
 
+static bool cwmp_complete_path(char *path)
+{
+	char buf[CWMP_PATH_LEN - 32];
+	const unsigned len = strlen(path);
+	bool partial = false;
+
+	if (path[0] == '.' || path[0] == 0) {
+		memcpy(buf, path, len + 1);
+		if (len + sizeof(CWMP_ROOT_OBJECT) < CWMP_PATH_LEN)
+			sprintf(path, "%s%s", CWMP_ROOT_OBJECT, buf);
+		else
+			path[0] = 0;
+	} else if (path[len - 1] == '.') {
+		path[len - 1] = 0;
+		partial = true;
+	}
+	return partial;
+}
+
 static int cwmp_add_parameter_value(node_t *node, const char *name)
 {
 	struct cwmp_iterator it;
+	int partial;
 
 	cwmp_iterator_init(&it);
 	it.cb = add_parameter_value;
 	it.node = node;
 
 	strncpy(it.path, name, sizeof(it.path));
-	return backend_get_parameter_value(&it);
+	partial = cwmp_complete_path(it.path);
+	return backend_get_parameter_value(&it, partial);
 }
 
 static int cwmp_handle_get_parameter_values(struct rpc_data *data)
@@ -93,13 +114,10 @@ static int cwmp_handle_get_parameter_values(struct rpc_data *data)
 	if (!cur_node)
 		return CWMP_ERROR_INVALID_PARAM;
 
-	/* NOTE: parital get not supported yet
-	 */
 	while (soap_array_iterate_contents(&cur_node, "string", &cur))
 		n_values += cwmp_add_parameter_value(node, cur);
 
 	cwmp_close_array(node, n_values, "cwmp:ParameterValueStruct");
-
 	return 0;
 }
 
@@ -195,23 +213,6 @@ static void add_parameter_name(struct cwmp_iterator *it, union cwmp_any *a)
 				a->param.writeable);
 }
 
-static void cwmp_complete_path(char *path)
-{
-	char buf[CWMP_PATH_LEN - 32];
-	const unsigned len = strlen(path);
-
-	if (path[0] == '.' || path[0] == 0) {
-		memcpy(buf, path, len + 1);
-		if (len + sizeof(CWMP_ROOT_OBJECT) < CWMP_PATH_LEN)
-			sprintf(path, "%s%s", CWMP_ROOT_OBJECT, buf);
-		else
-			path[0] = 0;
-	} else if (path[len - 1] == '.') {
-		path[len - 1] = 0;
-		// partial = true;
-	}
-}
-
 static int cwmp_handle_get_parameter_names(struct rpc_data *data)
 {
 	struct cwmp_iterator it;
@@ -229,11 +230,10 @@ static int cwmp_handle_get_parameter_names(struct rpc_data *data)
 	if (!__soap_get_field(node, "ParameterPath", it.path, sizeof(it.path)))
 		return CWMP_ERROR_INVALID_ARGUMENTS;
 
-
-	cwmp_complete_path(it.path);
 	node = roxml_add_node(data->out, 0, ROXML_ELM_NODE,
 				"cwmp:GetParameterNamesResponse", NULL);
 	it.node = cwmp_open_array(node, "ParameterList");
+	cwmp_complete_path(it.path);
 	n_params = backend_get_parameter_names(&it, next_level);
 	cwmp_close_array(it.node, n_params, "cwmp:ParameterInfoStruct");
 
@@ -550,9 +550,6 @@ static void cwmp_add_inform_parameters(node_t *node)
 
 	cur = path + sprintf(path, "%s.", CWMP_ROOT_OBJECT);
 
-	strcpy(cur, "DeviceSummary");
-	n += cwmp_add_parameter_value(node, path);
-
 	cur1 = cur + sprintf(cur, "DeviceInfo.");
 	for (i = 0; i < ARRAY_SIZE(devinfo_params); i++) {
 		strcpy(cur1, devinfo_params[i]);
@@ -650,6 +647,7 @@ static void cwmp_add_device_id(node_t *node)
 	static const char *devid_params[] = {
 		"Manufacturer",
 		"ManufacturerOUI",
+		"OUI",
 		"ProductClass",
 		"SerialNumber"
 	};
@@ -665,7 +663,7 @@ static void cwmp_add_device_id(node_t *node)
 	cur = it.path + sprintf(it.path, "%s.DeviceInfo.", CWMP_ROOT_OBJECT);
 	for (i = 0; i < ARRAY_SIZE(devid_params); i++) {
 		strcpy(cur, devid_params[i]);
-		n += backend_get_parameter_value(&it);
+		n += backend_get_parameter_value(&it, 0);
 	}
 }
 

@@ -49,15 +49,15 @@ static inline void cwmp_iterator_init(struct cwmp_iterator *it)
 
 void backend_init(struct ubus_context *ubus_ctx);
 void backend_deinit();
-int backend_get_parameter_names(struct cwmp_iterator *it, bool next_level);
-int backend_get_parameter_value(struct cwmp_iterator *it);
+int backend_get_parameter_names(struct cwmp_iterator *it, bool nxt_lvl);
+int backend_get_parameter_value(struct cwmp_iterator *it, bool nxt_lvl);
 int backend_set_parameter_value(const char *path, const char *value);
 int backend_commit();
 
 static inline struct blob_attr *
 get_blob(struct blob_attr *data, const char *name)
 {
-	struct blobmsg_policy policy = { name, BLOBMSG_TYPE_UNSPEC };
+	const struct blobmsg_policy policy = { name, BLOBMSG_TYPE_UNSPEC };
 	struct blob_attr *attr;
 
 	blobmsg_parse(&policy, 1, &attr,
