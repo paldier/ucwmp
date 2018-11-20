@@ -172,7 +172,7 @@ void cwmp_flag_event(const char *id, const char *command_key, struct blob_attr *
 	return;
 
 out:
-	cwmp_schedule_session();
+	cwmp_schedule_session(1);
 	cwmp_save_cache(false);
 }
 

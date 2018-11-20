@@ -41,6 +41,8 @@
 #define CWMP_CACHE_FILE	CWMP_ETC_DIR "/cwmp-cache.json"
 #define CWMP_STARTUP_FILE	CWMP_ETC_DIR "/cwmp-startup.json"
 
+#define CWMP_SESSION_ERR_RETRY_MSEC	(10 * 1000)
+
 static struct uci_context *uci_ctx;
 static const char *session_path = CWMP_SESSION_BIN;
 static const char *config_path = CWMP_CONFIG_DIR;
@@ -220,10 +222,13 @@ static void session_cb(struct uloop_process *c, int ret)
 	cwmp_download_check_pending(true);
 
 	if (debug_level)
-		fprintf(stderr, "Session completed (success: %d)\n", session_success);
+		fprintf(stderr, "Session completed (rc: %d success: %d)\n",
+			ret, session_success);
 
-	if (session_pending)
-		cwmp_schedule_session();
+	if (ret)
+		cwmp_schedule_session(CWMP_SESSION_ERR_RETRY_MSEC);
+	else if (session_pending)
+		cwmp_schedule_session(1);
 }
 
 static void __cwmp_run_session(struct uloop_timeout *timeout)
@@ -242,19 +247,19 @@ static void __cwmp_run_session(struct uloop_timeout *timeout)
 	cwmp_run_session();
 }
 
-void cwmp_schedule_session(void)
+void cwmp_schedule_session(int delay_msec)
 {
 	static struct uloop_timeout timer = {
 		.cb = __cwmp_run_session,
 	};
 
-	uloop_timeout_set(&timer, 1);
+	uloop_timeout_set(&timer, delay_msec);
 }
 
 static void cwmp_update_session_timer(void);
 static void __cwmp_session_timer(struct uloop_timeout *timeout)
 {
-	cwmp_schedule_session();
+	cwmp_schedule_session(1);
 	cwmp_flag_event("2 PERIODIC", NULL, NULL);
 	cwmp_update_session_timer();
 }
@@ -526,7 +531,7 @@ int main(int argc, char **argv)
 	cwmp_load_startup(CWMP_STARTUP_FILE);
 
 	uloop_timeout_cancel(&save_cache);
-	cwmp_schedule_session();
+	cwmp_schedule_session(1);
 	cwmp_update_session_timer();
 	uloop_run();
 	uloop_done();

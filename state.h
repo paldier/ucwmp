@@ -99,7 +99,7 @@ void cwmp_flag_event(const char *id, const char *command_key, struct blob_attr *
 bool cwmp_state_has_events(void);
 void cwmp_clear_pending_events(void);
 
-void cwmp_schedule_session(void);
+void cwmp_schedule_session(int delay_msec);
 void cwmp_save_cache(bool immediate);
 int cwmp_load_config(void);
 

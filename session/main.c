@@ -31,6 +31,7 @@
 
 bool session_init = true;
 
+static int session_rc;
 static int debug_level = 0;
 static char *buf;
 static int buf_len, buf_ofs;
@@ -257,7 +258,8 @@ static void cwmp_data_eof(struct uclient *cl)
 
 static void cwmp_error(struct uclient *cl, int code)
 {
-	fprintf(stderr, "Got uclient error %d\n", code);
+	fprintf(stderr, "Got uclient error: %s\n", uclient_strerror(code));
+	session_rc = -1;
 	uloop_end();
 }
 
@@ -413,5 +415,5 @@ int main(int argc, char **argv)
 	uloop_done();
 	backend_deinit();
 	deinit_ustream_ssl();
-	return 0;
+	return session_rc;
 }
