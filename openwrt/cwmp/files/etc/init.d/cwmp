@@ -35,7 +35,7 @@ start_service() {
 	ubus -t 10 wait_for scald.tr-181
 
 	procd_open_instance cwmpd
-	procd_set_param command /usr/sbin/cwmpd
+	procd_set_param command /usr/sbin/cwmpd -d
 	procd_set_param respawn
 	procd_set_param stderr 1
 	procd_set_param stdout 1
