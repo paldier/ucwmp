@@ -274,6 +274,13 @@ static void cwmp_download_run(void)
 		NULL
 	};
 
+	int i;
+
+	printf("exec:");
+	for (i = 0; argv[i]; i++)
+		printf(" %s", argv[i]);
+	puts("");
+
 	execvp(argv[0], (char **) argv);
 	exit(255);
 }
