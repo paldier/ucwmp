@@ -8,3 +8,13 @@ config cwmp 'foo'
 	option password 'openacs'
 	option periodic_interval '20'
 
+#config cwmp 'ax'
+#	option url 'https://acs3.cksoft.de:7547/digest'
+#	option connection_port '8080'
+#	option local_username 'test'
+#	option local_password 'test'
+#	option username 'test'
+#	option password 'test'
+#	option periodic_enabled '1'
+#	option periodic_interval '30000'
+

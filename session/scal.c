@@ -136,32 +136,25 @@ int scal_list(struct scal_ctx *ctx, const char *path, struct blob_attr **objs)
 
 
 static const char * blob_any_to_string(struct blob_attr *val,
-					char *buf,
-					unsigned len,
-					const char **type)
+					char *buf, unsigned len)
 {
 	const enum blobmsg_type t = blobmsg_type(val);
 
 	switch (t) {
 	case BLOBMSG_TYPE_STRING:
 		buf = blobmsg_data(val);
-		*type = "xsd:string";
 		break;
 	case BLOBMSG_TYPE_INT32:
 		snprintf(buf, len, "%d", blobmsg_get_u32(val));
-		*type = "xsd:integer";
 		break;
 	case BLOBMSG_TYPE_INT64:
 		snprintf(buf, len, "%"PRId64, blobmsg_get_u64(val));
-		*type = "xsd:long";
 		break;
 	case BLOBMSG_TYPE_BOOL:
 		buf = blobmsg_get_bool(val) ? "true" : "false";
-		*type = "xsd:boolean";
 		break;
 	default:
 		err("unknown type %d\n", t);
-		*type = "xsd:string";
 		break;
 	}
 	return buf;
@@ -170,15 +163,30 @@ static const char * blob_any_to_string(struct blob_attr *val,
 static void scal_get_cb(struct ubus_request *req,
 			int type, struct blob_attr *msg)
 {
-	struct scal_get_req *r = req->priv;
-	struct blob_attr *val = get_blob(msg, "value");
+	enum {
+		P_VAL,
+		P_TYPE,
+		__P_MAX
+	};
+	static const struct blobmsg_policy p[] = {
+		{ "value", BLOBMSG_TYPE_UNSPEC },
+		{ "type", BLOBMSG_TYPE_STRING }
+	};
 	char buf[32];
+	struct scal_get_req *r = req->priv;
+	struct blob_attr *tb[__P_MAX];
 	union cwmp_any u = {};
 
-	if (val) {
+	blobmsg_parse(p, __P_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
+	if (tb[P_VAL]) {
 		u.param.name = r->name;
-		u.param.value = blob_any_to_string(val, buf, sizeof(buf),
-						&u.param.type);
+
+		if (tb[P_TYPE])
+			u.param.type = blobmsg_get_string(tb[P_TYPE]);
+		if (u.param.type == NULL)
+			u.param.type = "string";
+
+		u.param.value = blob_any_to_string(tb[P_VAL], buf, sizeof(buf));
 		if (u.param.value) {
 			r->it->cb(r->it, &u);
 			r->success = 1;
