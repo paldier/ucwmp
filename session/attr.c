@@ -131,7 +131,7 @@ bool cwmp_attr_cache_load(void)
 		return false;
 
 	obj = json_object_from_file(attr_cache_file);
-	if (is_error(obj))
+	if (obj == NULL)
 		return false;
 
 	blob_buf_init(&b, 0);

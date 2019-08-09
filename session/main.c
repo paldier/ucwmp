@@ -339,7 +339,7 @@ static int load_events(const char *data)
 {
 	json_object *obj = json_tokener_parse(data);
 
-	if (is_error(obj)) {
+	if (obj == NULL) {
 		fprintf(stderr, "Could not parse event data\n");
 		return -1;
 	}
