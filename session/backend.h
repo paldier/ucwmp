@@ -1,6 +1,7 @@
 #ifndef BACKEND_H
 #define BACKEND_H
 
+#include "../ucwmp.h"
 #include "rpc.h"
 
 #include <roxml.h>
@@ -40,30 +41,24 @@ struct cwmp_iterator {
 static inline void cwmp_iterator_init(struct cwmp_iterator *it)
 {
 	it->path[0] = 0;
-	it->node = 0;
+	it->node = NULL;
 	it->priv = NULL;
 	it->cb = NULL;
 	it->cb_call_cnt = 0;
 	it->error = 0;
 }
 
-void backend_init(struct ubus_context *ubus_ctx);
-void backend_deinit();
-int backend_get_parameter_names(struct cwmp_iterator *it, bool nxt_lvl);
-int backend_get_parameter_value(struct cwmp_iterator *it, bool nxt_lvl);
-int backend_set_parameter_value(const char *path, const char *value);
-int backend_commit();
+struct backend {
+	void (*init)(struct ubus_context *ctx);
+	void (*deinit)();
+	int (*get_parameter_names)(struct cwmp_iterator *it, bool next_level);
+	int (*get_parameter_value)(struct cwmp_iterator *it, bool next_level);
+	int (*set_parameter_value)(const char *path, const char *value);
+	// del
+	// add
+	int (*commit)();
+};
 
-static inline struct blob_attr *
-get_blob(struct blob_attr *data, const char *name)
-{
-	const struct blobmsg_policy policy = { name, BLOBMSG_TYPE_UNSPEC };
-	struct blob_attr *attr;
-
-	blobmsg_parse(&policy, 1, &attr,
-			blobmsg_data(data),
-			blobmsg_data_len(data));
-	return attr;
-}
+extern const struct backend backend;
 
 #endif

@@ -2,12 +2,6 @@
 
 #include <inttypes.h>
 
-#define err(fmt, args...) \
-	fprintf(stderr, "%s: " fmt, __FUNCTION__, ##args)
-
-#define err_ubus(ubus_rc, fmt, args...) \
-	err(fmt ": %s\n", ##args, ubus_strerror(ubus_rc))
-
 struct scal_get_req {
 	struct cwmp_iterator *it;
 	char path[CWMP_PATH_LEN];

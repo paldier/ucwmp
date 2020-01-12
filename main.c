@@ -155,7 +155,9 @@ static void cwmp_exec_session(const char *event_data)
 	argv[argc++] = config.acs_info[0];
 	argv[argc] = NULL;
 	snprintf(debug_str, sizeof(debug_str), "%d", debug_level);
-	execvp(argv[0], (char * const *) argv);
+
+	if (execvp(argv[0], (char * const *) argv) == -1)
+		fprintf(stderr, "execvp of %s failed: %s\n", argv[0], strerror(errno));
 	exit(255);
 }
 

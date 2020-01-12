@@ -74,7 +74,6 @@ int cwmp_session_response(struct rpc_data *data);
 void cwmp_session_continue(struct rpc_data *data);
 
 void server_load_info(const char *filename);
-void server_update_local_addr(const char *addr, const char *port);
 void cwmp_update_url(const char *url, const char *auth_str);
 void cwmp_load_events(const char *filename);
 void cwmp_clear_pending_events(void);

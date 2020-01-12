@@ -33,13 +33,12 @@ void cwmp_clear_pending_events(void)
 	ubus_invoke(ubus_ctx, cwmp_id, "event_sent", b.head, NULL, NULL, 0);
 }
 
-
 static void __constructor server_init(void)
 {
 	ubus_ctx = ubus_connect(NULL);
 	ubus_lookup_id(ubus_ctx, "cwmp", &cwmp_id);
 
-	backend_init(ubus_ctx);
+	backend.init(ubus_ctx);
 }
 
 int cwmp_invoke(const char *cmd, struct blob_attr *data)

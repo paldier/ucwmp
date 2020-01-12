@@ -64,7 +64,10 @@ static void add_parameter_value(struct cwmp_iterator *it, union cwmp_any *a)
 {
 	const struct b_cwmp_param *p = &a->param;
 
-	cwmp_add_parameter_value_struct(it->node, it->path, p->value, p->type);
+	if (p->path)
+		cwmp_add_parameter_value_struct(it->node, p->path, p->value, p->type);
+	else
+		cwmp_add_parameter_value_struct(it->node, it->path, p->value, p->type);
 }
 
 static bool cwmp_complete_path(char *path)
@@ -80,7 +83,6 @@ static bool cwmp_complete_path(char *path)
 		else
 			path[0] = 0;
 	} else if (path[len - 1] == '.') {
-		path[len - 1] = 0;
 		partial = true;
 	}
 	return partial;
@@ -97,7 +99,7 @@ static int cwmp_add_parameter_value(node_t *node, const char *name)
 
 	strncpy(it.path, name, sizeof(it.path));
 	partial = cwmp_complete_path(it.path);
-	return backend_get_parameter_value(&it, partial);
+	return backend.get_parameter_value(&it, partial);
 }
 
 static int cwmp_handle_get_parameter_values(struct rpc_data *data)
@@ -154,7 +156,7 @@ static int cwmp_handle_set_parameter_values(struct rpc_data *data)
 		if (!name || !value) {
 			abort = true;
 		} else {
-			error = backend_set_parameter_value(name, value);
+			error = backend.set_parameter_value(name, value);
 			if (error) {
 				fault[n_fault].param = name;
 				fault[n_fault].code = error;
@@ -175,7 +177,7 @@ static int cwmp_handle_set_parameter_values(struct rpc_data *data)
 	}
 
 	if (!n_fault && !error)
-		backend_commit();
+		backend.commit();
 
 	if (error)
 		goto out;
@@ -234,7 +236,7 @@ static int cwmp_handle_get_parameter_names(struct rpc_data *data)
 				"cwmp:GetParameterNamesResponse", NULL);
 	it.node = cwmp_open_array(node, "ParameterList");
 	cwmp_complete_path(it.path);
-	n_params = backend_get_parameter_names(&it, next_level);
+	n_params = backend.get_parameter_names(&it, next_level);
 	cwmp_close_array(it.node, n_params, "cwmp:ParameterInfoStruct");
 
 	if (it.error) {
@@ -633,12 +635,31 @@ static void cwmp_add_inform_events(node_t *node, bool changed)
 	cwmp_close_array(node, n, "EventStruct");
 }
 
+static const char * get_name_offset(const char *path)
+{
+	unsigned len = strlen(path);
+
+	if (len == 0 || path[len - 1] == '.')
+		return "";
+
+	while (--len && path[len] != '.')
+		;
+
+	return &path[len + 1];
+}
+
 static void add_value(struct cwmp_iterator *it, union cwmp_any *a)
 {
 	const struct b_cwmp_param *p = &a->param;
+	const char *name;
+
+	if (p->path)
+		name = get_name_offset(p->path);
+	else
+		name = p->name;
 
 	roxml_add_node(it->node, 0, ROXML_ELM_NODE,
-			(char *)p->name, (char *)p->value);
+			(char *)name, (char *)p->value);
 }
 
 static void cwmp_add_device_id(node_t *node)
@@ -663,7 +684,7 @@ static void cwmp_add_device_id(node_t *node)
 	cur = it.path + sprintf(it.path, "%s.DeviceInfo.", CWMP_ROOT_OBJECT);
 	for (i = 0; i < ARRAY_SIZE(devid_params); i++) {
 		strcpy(cur, devid_params[i]);
-		n += backend_get_parameter_value(&it, 0);
+		n += backend.get_parameter_value(&it, 0);
 	}
 }
 

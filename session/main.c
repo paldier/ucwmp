@@ -203,7 +203,6 @@ static void cwmp_free_request(void)
 static void cwmp_data_read(struct uclient *cl)
 {
 	int len;
-
 	do {
 		if (buf_len < buf_ofs + 256) {
 			buf_len += 256;
@@ -357,6 +356,12 @@ static int load_events(const char *data)
 	return 0;
 }
 
+static void server_update_local_addr(const char *addr, const char *port)
+{
+	//blobmsg_printf(&vars, "cwmp_local_addr", "%s:%s", addr, port);
+	//acs_set_script_data(&api, vars.head);
+}
+
 int main(int argc, char **argv)
 {
 	const char *progname = argv[0];
@@ -413,7 +418,7 @@ int main(int argc, char **argv)
 
 	uloop_run();
 	uloop_done();
-	backend_deinit();
+	backend.deinit();
 	deinit_ustream_ssl();
 	return session_rc;
 }
