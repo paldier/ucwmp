@@ -178,7 +178,7 @@ void cwmp_download_apply_exec(const char *path, const char *type, const char *fi
 
 static void cwmp_run_session(void)
 {
-	char *ev = cwmp_get_event_str(true);
+	char *ev;
 	int pid;
 
 	session_pending = false;
@@ -196,6 +196,7 @@ static void cwmp_run_session(void)
 		return;
 	}
 
+	ev = cwmp_get_event_str(true);
 	cwmp_exec_session(ev);
 	free(ev);
 }
