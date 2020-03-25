@@ -54,6 +54,8 @@ struct backend {
 	int (*get_parameter_names)(struct cwmp_iterator *it, bool next_level);
 	int (*get_parameter_value)(struct cwmp_iterator *it, bool next_level);
 	int (*set_parameter_value)(const char *path, const char *value);
+	int (*get_parameter_values)(node_t *node, cwmp_iterator_cb cb);
+	void (*get_parameter_values_init)();
 	// del
 	// add
 	int (*commit)();

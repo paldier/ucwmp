@@ -12,12 +12,13 @@ static struct uspd_ctx {
 	unsigned uspd_id;
 	int prepared;
 	struct blob_buf buf;
+	void *array;
 } uspd;
 
 struct uspd_get_req {
 	struct cwmp_iterator *it;
-	bool success;
 	bool names_only;
+	unsigned n_values;
 };
 
 struct uspd_set_req {
@@ -70,7 +71,7 @@ static void uspd_get_req_init(struct uspd_get_req *r,
 {
 	r->it = it;
 	r->names_only = names_only;
-	r->success = false;
+	r->n_values = 0;
 }
 
 static struct blob_attr * get_parameters(struct blob_attr *msg)
@@ -106,12 +107,11 @@ static void get_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 	struct blob_attr *tb[__P_MAX];
 	struct blob_attr *cur;
 	struct blob_attr *params;
-	union cwmp_any u = { .param.path = r->it->path };
 	int rem;
 
 	params = get_parameters(msg);
 	if (params == NULL)
-		goto out;
+		return;
 
 	blobmsg_for_each_attr(cur, params, rem) {
 		struct blob_attr *param;
@@ -122,6 +122,8 @@ static void get_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 		value = tb[P_VAL];
 
 		if ((value && param) || (r->names_only && param)) {
+			union cwmp_any u = { .param.path = r->it->path };
+
 			u.param.path = blobmsg_get_string(param);
 
 			if (tb[P_TYPE])
@@ -132,7 +134,10 @@ static void get_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 			u.param.value = blob_any_to_string(value, buf, sizeof(buf));
 			if (u.param.value) {
 				r->it->cb(r->it, &u);
-				r->success = 1;
+				r->n_values += 1;
+
+				cwmp_debug(1, "usp", "parameter '%s' get value '%s'\n",
+		  			u.param.path, u.param.value);
 			}
 		} else {
 			err("missing 'value' field in response for '%s'\n",
@@ -140,10 +145,6 @@ static void get_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 			r->it->error = CWMP_ERROR_INTERNAL_ERROR;
 		}
 	}
-
-out:
-	cwmp_debug(1, "usp", "parameter '%s' get value '%s'\n",
-		  u.param.path, u.param.value);
 }
 
 static void set_cb(struct ubus_request *req, int type, struct blob_attr *msg)
@@ -194,12 +195,43 @@ usp_get_parameter(struct cwmp_iterator *it, bool next_level, bool names_only)
 		err_ubus(err, "ubus_invoke " USP_UBUS " get path=%s", it->path);
 		uspd.prepared = 0;
 	}
-	return req.success;
+	return req.n_values;
+}
+
+static void usp_get_parameter_values_init()
+{
+	blob_buf_init(&uspd.buf, 0);
+	uspd.array = blobmsg_open_array(&uspd.buf, "paths");
+}
+
+static int usp_get_parameter_values(node_t *node, cwmp_iterator_cb cb)
+{
+	struct uspd_get_req req;
+	struct cwmp_iterator it = { .cb = cb, .node = node };
+	int err;
+
+	blobmsg_close_array(&uspd.buf, uspd.array);
+
+	if (!uspd_ctx_prepare(&uspd))
+		return 0;
+
+	uspd_get_req_init(&req, &it, false);
+
+	blobmsg_add_string(&uspd.buf, "proto", "cwmp");
+
+	err = ubus_invoke(uspd.ubus_ctx, uspd.uspd_id, "get_safe",
+			uspd.buf.head, get_cb, &req, 10000);
+	if (err) {
+		err_ubus(err, "ubus_invoke " USP_UBUS " get_safe");
+		uspd.prepared = 0;
+	}
+	return req.n_values;
 }
 
 static int usp_get_parameter_value(struct cwmp_iterator *it, bool next_level)
 {
-	return usp_get_parameter(it, next_level, false);
+	blobmsg_add_string(&uspd.buf, NULL, it->path);
+	return 0;
 }
 
 static int usp_get_parameter_names(struct cwmp_iterator *it, bool next_level)
@@ -246,5 +278,7 @@ const struct backend backend = {
 	.get_parameter_names = usp_get_parameter_names,
 	.get_parameter_value = usp_get_parameter_value,
 	.set_parameter_value = usp_set_parameter_value,
+	.get_parameter_values = usp_get_parameter_values,
+	.get_parameter_values_init = usp_get_parameter_values_init,
 	.commit = usp_commit,
 };

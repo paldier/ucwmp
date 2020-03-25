@@ -116,8 +116,13 @@ static int cwmp_handle_get_parameter_values(struct rpc_data *data)
 	if (!cur_node)
 		return CWMP_ERROR_INVALID_PARAM;
 
+	backend.get_parameter_values_init();
+
 	while (soap_array_iterate_contents(&cur_node, "string", &cur))
 		n_values += cwmp_add_parameter_value(node, cur);
+
+	if (backend.get_parameter_values)
+		n_values = backend.get_parameter_values(node, add_parameter_value);
 
 	cwmp_close_array(node, n_values, "cwmp:ParameterValueStruct");
 	return 0;
@@ -552,6 +557,7 @@ static void cwmp_add_inform_parameters(node_t *node)
 
 	cur = path + sprintf(path, "%s.", CWMP_ROOT_OBJECT);
 
+	backend.get_parameter_values_init();
 	cur1 = cur + sprintf(cur, "DeviceInfo.");
 	for (i = 0; i < ARRAY_SIZE(devinfo_params); i++) {
 		strcpy(cur1, devinfo_params[i]);
@@ -563,6 +569,9 @@ static void cwmp_add_inform_parameters(node_t *node)
 		strcpy(cur1, mgmt_params[i]);
 		n += cwmp_add_parameter_value(node, path);
 	}
+
+	if (backend.get_parameter_values)
+		n = backend.get_parameter_values(node, add_parameter_value);
 
 	n += cwmp_attr_cache_add_changed(node);
 	cwmp_close_array(node, n, "ParameterValueStruct");
@@ -668,12 +677,11 @@ static void cwmp_add_device_id(node_t *node)
 	static const char *devid_params[] = {
 		"Manufacturer",
 		"ManufacturerOUI",
-		"OUI",
 		"ProductClass",
 		"SerialNumber"
 	};
 	char *cur;
-	unsigned i, n = 0;
+	unsigned i;
 
 	node = roxml_add_node(node, 0, ROXML_ELM_NODE, "DeviceId", NULL);
 
@@ -681,11 +689,19 @@ static void cwmp_add_device_id(node_t *node)
 	it.node = node;
 	it.cb = add_value;
 
+	backend.get_parameter_values_init();
+
 	cur = it.path + sprintf(it.path, "%s.DeviceInfo.", CWMP_ROOT_OBJECT);
 	for (i = 0; i < ARRAY_SIZE(devid_params); i++) {
 		strcpy(cur, devid_params[i]);
-		n += backend.get_parameter_value(&it, 0);
+		backend.get_parameter_value(&it, 0);
 	}
+
+	if (backend.get_parameter_values)
+		backend.get_parameter_values(node, add_value);
+
+	roxml_add_node(node, 0, ROXML_ELM_NODE,
+			(char *)"OUI", (char *)"000DB9AFDD");
 }
 
 int cwmp_session_init(struct rpc_data *data)

@@ -522,11 +522,16 @@ static int scal_get_parameter_value(struct cwmp_iterator *it, bool nxt_lvl)
 	return rc;
 }
 
+static void scal_get_parameter_values_init()
+{
+}
+
 const struct backend backend = {
 	.init = scal_init,
 	.deinit = scal_deinit,
 	.get_parameter_names = scal_get_parameter_names,
 	.get_parameter_value = scal_get_parameter_value,
 	.set_parameter_value = scal_set_parameter_value,
+	.get_parameter_values_init = scal_get_parameter_values_init,
 	.commit = scal_commit,
 };
