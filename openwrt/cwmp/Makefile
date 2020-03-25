@@ -22,9 +22,26 @@ define Package/ucwmp
   TITLE:=Tiny CWMP (TR-069) client
   ABI_VERSION:=$(PKG_VERSION)
   DEPENDS:=+libubox +uhttpd +libroxml +libuci +libuclient +uclient-fetch \
-	+scal-plugin-json \
-	+libustream-mbedtls +ca-certificates
+	+libustream-mbedtls +ca-certificates \
+	+UCWMP_BACKEND_SCAL:scal-plugin-json \
+	+UCWMP_BACKEND_USP:uspd
 endef
+
+define Package/ucwmp/config
+config UCWMP_BACKEND_SCAL
+	bool "Use scald as backend"
+	default n
+
+config UCWMP_BACKEND_USP
+	bool "Use uspd as backend"
+	default y
+endef
+
+ifeq ($(CONFIG_UCWMP_BACKEND_SCAL),y)
+	CMAKE_OPTIONS += -DBACKEND=scal
+else
+	CMAKE_OPTIONS += -DBACKEND=usp
+endif
 
 define Package/ucwmp/conffiles
 /etc/config/cwmp
