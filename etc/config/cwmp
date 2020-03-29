@@ -1,3 +1,13 @@
+config cwmp 'prpl'
+	option url 'http://partner.acs.smartrg.com'
+	option periodic_enabled '1'
+	option connection_port '1080'
+	option local_username '_user'
+	option local_password '_password'
+	option username 'prpl-ddanzberger'
+	option password 'virtu-painting-alienist'
+	option periodic_interval '20'
+
 config cwmp 'foo'
 	option url 'http://172.27.0.178:8080/openacs/acs'
 	option periodic_enabled '1'
@@ -17,4 +27,3 @@ config cwmp 'foo'
 #	option password 'test'
 #	option periodic_enabled '1'
 #	option periodic_interval '30000'
-
