@@ -1,0 +1,35 @@
+#!/bin/sh
+
+. /usr/share/libubox/jshn.sh
+. /etc/openwrt_release
+. /etc/device_info
+
+model_name=""
+
+get_model_name()
+{
+	json_load "$(cat /etc/board.json)"
+	json_select model
+	json_get_var model_name "name"
+	json_cleanup
+}
+
+get_model_name
+
+[ -z "$MANUFACTURER_OUI" ] && {
+	MANUFACTURER_OUI="$(tr 'a-z' 'A-Z' < /sys/class/net/eth0/address)"
+	MANUFACTURER_OUI="${MANUFACTURER_OUI%:*:*:*}"
+	MANUFACTURER_OUI="${MANUFACTURER_OUI//:/}"
+}
+
+uci batch <<-EOF
+	set cwmp.deviceinfo=deviceinfo
+	set cwmp.@deviceinfo[0].SoftwareVersion='$DISTRIB_CODENAME $DISTRIB_REVISION'
+	set cwmp.@deviceinfo[0].Manufacturer='${DEVICE_MANUFACTURER:-OpenWrt}'
+	set cwmp.@deviceinfo[0].Description='$DEVICE_PRODUCT'
+	set cwmp.@deviceinfo[0].SerialNumber='$(cat /sys/class/net/eth0/address | sed 's/://g')'
+	set cwmp.@deviceinfo[0].ManufacturerOUI='$MANUFACTURER_OUI'
+	set cwmp.@deviceinfo[0].HardwareVersion='$DEVICE_REVISION'
+	set cwmp.@deviceinfo[0].ModelName='$model_name'
+	set cwmp.@deviceinfo[0].ProductClass='Router'
+EOF
