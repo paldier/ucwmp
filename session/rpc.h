@@ -21,7 +21,8 @@
 
 #include "soap.h"
 
-#define CWMP_PATH_LEN	256
+#define CWMP_ROOT_OBJECT	"Device" /* tr-181 device:2 */
+#define CWMP_PATH_LEN		256
 
 enum cwmp_error {
 	CWMP_ERROR_INVALID_METHOD =		9000,

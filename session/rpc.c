@@ -19,12 +19,11 @@
 #include <libubox/blobmsg.h>
 #include <libubox/blobmsg_json.h>
 
+#include "object.h"
 #include "soap.h"
 #include "rpc.h"
 #include "attr.h"
 #include "backend.h"
-
-#define CWMP_ROOT_OBJECT "Device" /* tr-181 device:2 */
 
 struct blob_buf events = {};
 
@@ -251,7 +250,6 @@ static int cwmp_handle_get_parameter_names(struct rpc_data *data)
 	return 0;
 }
 
-#if 0
 static int cwmp_add_object_attr(struct path_iterate *it, struct cwmp_object *obj, int idx)
 {
 	struct param_attr *attr;
@@ -278,11 +276,9 @@ static int cwmp_add_object_attr(struct path_iterate *it, struct cwmp_object *obj
 
 	return 1;
 }
-#endif
 
 static int cwmp_handle_get_parameter_attributes(struct rpc_data *data)
 {
-#if 0
 	struct path_iterate it = {
 		.cb = cwmp_add_object_attr
 	};
@@ -311,12 +307,8 @@ static int cwmp_handle_get_parameter_attributes(struct rpc_data *data)
 	cwmp_close_array(it.node, n, "cwmp:ParameterAttributeStruct");
 
 	return ret;
-#endif
-	printf("not implemented\n");
-	return 0;
 }
 
-#if 0
 static int cwmp_set_param_attr(node_t *node)
 {
 	struct param_attr *attr;
@@ -357,11 +349,9 @@ static int cwmp_set_param_attr(node_t *node)
 
 	return 0;
 }
-#endif
 
 static int cwmp_handle_set_parameter_attributes(struct rpc_data *data)
 {
-#if 0
 	node_t *node, *cur_node;
 	int ret;
 
@@ -384,9 +374,6 @@ static int cwmp_handle_set_parameter_attributes(struct rpc_data *data)
 	roxml_add_node(data->out, 0, ROXML_ELM_NODE, "cwmp:SetParameterAttributesResponse", NULL);
 
 	return ret;
-#endif
-	printf("not impl\n");
-	return -1;
 }
 
 static int cwmp_handle_add_object(struct rpc_data *data)

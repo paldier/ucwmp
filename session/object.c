@@ -41,8 +41,7 @@ static int cwmp_object_cmp(const void *k1, const void *k2, void *ptr)
 }
 
 struct cwmp_object root_object = {
-	.node.key = "InternetGatewayDevice",
-
+	.node.key = CWMP_ROOT_OBJECT,
 	.objects = AVL_TREE_INIT(root_object.objects, cwmp_object_cmp, 0, NULL),
 };
 
