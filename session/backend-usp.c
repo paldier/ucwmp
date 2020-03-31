@@ -27,6 +27,17 @@ struct uspd_set_req {
 	unsigned error;
 };
 
+struct uspd_add_req {
+	struct cwmp_iterator *it;
+	int error;
+};
+
+struct uspd_del_req {
+	const char *path;
+	const char *key;
+	int error;
+};
+
 static void usp_init(struct ubus_context *ubus)
 {
 	memset(&uspd, 0, sizeof(uspd));
@@ -72,6 +83,22 @@ static void uspd_get_req_init(struct uspd_get_req *r,
 	r->it = it;
 	r->names_only = names_only;
 	r->n_values = 0;
+}
+
+static void uspd_add_req_init(struct uspd_add_req *r,
+				struct cwmp_iterator *it)
+{
+	r->it = it;
+	r->error = 0;
+}
+
+static void uspd_del_req_init(struct uspd_del_req *r,
+				const char *path,
+				const char *key)
+{
+	r->path = path;
+	r->key = key;
+	r->error = 0;
 }
 
 static struct blob_attr * get_parameters(struct blob_attr *msg)
@@ -266,6 +293,127 @@ static int usp_commit()
 	return 0;
 }
 
+static void add_cb(struct ubus_request *req, int type, struct blob_attr *msg)
+{
+	enum {
+		P_ADD_STATUS,
+		P_ADD_INSTANCE,
+		P_ADD_FAULT,
+		__P_ADD_MAX
+	};
+	static const struct blobmsg_policy p[__P_ADD_MAX] = {
+		{ "status", BLOBMSG_TYPE_INT8 },
+		{ "instance", BLOBMSG_TYPE_STRING },
+		{ "fault", BLOBMSG_TYPE_INT32 },
+	};
+	struct uspd_add_req *r = req->priv;
+	struct blob_attr *tb[__P_ADD_MAX];
+	struct blob_attr *cur;
+	union cwmp_any u = {};
+
+	blobmsg_parse(p, __P_ADD_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
+
+	if ((cur = tb[P_ADD_STATUS]))
+		u.add_obj.status = !blobmsg_get_u8(cur);
+
+	if ((cur = tb[P_ADD_FAULT]))
+		u.add_obj.status = blobmsg_get_u32(cur);
+
+	if ((cur = tb[P_ADD_INSTANCE]))
+		u.add_obj.instance_num = blobmsg_get_string(cur);
+
+	r->it->cb(r->it, &u);
+	cwmp_debug(1, "usp", "Add Obejct '%s' instance '%s' status '%d'\n",
+		  r->it->path, u.add_obj.instance_num, u.add_obj.status);
+}
+
+static int usp_add_object(struct cwmp_iterator *it, const char *key)
+{
+	struct uspd_add_req req;
+	const char *path = it->path;
+	int err;
+
+	if (!uspd_ctx_prepare(&uspd))
+		return CWMP_ERROR_INTERNAL_ERROR;
+
+	cwmp_debug(1, "usp", "Add Object '%s' with key '%s'\n", path, key);
+
+	blob_buf_init(&uspd.buf, 0);
+	blobmsg_add_string(&uspd.buf, "path", path);
+	blobmsg_add_string(&uspd.buf, "key", key);
+	blobmsg_add_string(&uspd.buf, "proto", "cwmp");
+
+	uspd_add_req_init(&req, it);
+
+	err = ubus_invoke(uspd.ubus_ctx, uspd.uspd_id, "add_object",
+			uspd.buf.head, add_cb, &req, 2000);
+	if (err) {
+		err_ubus(err, "ubus_invoke " USP_UBUS "add_object path=%s,key=%s",
+			path, key);
+		uspd.prepared = 0;
+	}
+	return req.error;
+}
+
+static void del_cb(struct ubus_request *req, int type, struct blob_attr *msg)
+{
+	enum {
+		P_DEL_STATUS,
+		P_DEL_FAULT,
+		__P_DEL_MAX
+	};
+	static const struct blobmsg_policy p[__P_DEL_MAX] = {
+		{ "status", BLOBMSG_TYPE_INT8 },
+		{ "fault", BLOBMSG_TYPE_INT32 },
+	};
+	struct uspd_del_req *r = req->priv;
+	struct blob_attr *tb[__P_DEL_MAX];
+	struct blob_attr *cur;
+	int err = -1;
+
+	blobmsg_parse(p, __P_DEL_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
+
+	if ((cur = tb[P_DEL_STATUS]))
+		err = !blobmsg_get_u8(cur);
+
+	/* fault overwrites status
+	 */
+	if ((cur = tb[P_DEL_FAULT]))
+		err = blobmsg_get_u32(cur);
+
+	r->error = err;
+
+	cwmp_debug(1, "usp", "Del Obejct '%s' key '%s' status '%d'\n",
+			r->path, r->key, err);
+}
+
+static int usp_del_object(const char *path, const char *key)
+{
+	struct uspd_del_req req;
+	int err;
+
+	if (!uspd_ctx_prepare(&uspd))
+		return CWMP_ERROR_INTERNAL_ERROR;
+
+	cwmp_debug(1, "usp", "Del Object '%s' with key '%s'\n", path, key);
+
+	blob_buf_init(&uspd.buf, 0);
+	blobmsg_add_string(&uspd.buf, "path", path);
+	blobmsg_add_string(&uspd.buf, "key", key);
+	blobmsg_add_string(&uspd.buf, "proto", "cwmp");
+
+	uspd_del_req_init(&req, path, key);
+
+	err = ubus_invoke(uspd.ubus_ctx, uspd.uspd_id, "del_object",
+			uspd.buf.head, del_cb, &req, 2000);
+	if (err) {
+		err_ubus(err, "ubus_invoke " USP_UBUS "add_object path=%s,key=%s",
+			path, key);
+		uspd.prepared = 0;
+	}
+	return req.error;
+}
+
 const struct backend backend = {
 	.init = usp_init,
 	.deinit = usp_deinit,
@@ -274,5 +422,7 @@ const struct backend backend = {
 	.set_parameter_value = usp_set_parameter_value,
 	.get_parameter_values = usp_get_parameter_values,
 	.get_parameter_values_init = usp_get_parameter_values_init,
+	.add_object = usp_add_object,
+	.del_object = usp_del_object,
 	.commit = usp_commit,
 };

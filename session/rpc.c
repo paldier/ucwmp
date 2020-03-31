@@ -376,14 +376,54 @@ static int cwmp_handle_set_parameter_attributes(struct rpc_data *data)
 	return ret;
 }
 
+static void add_object_response(struct cwmp_iterator *it, union cwmp_any *a)
+{
+	const struct b_cwmp_add_object *obj = &a->add_obj;
+	node_t *node = it->node;
+	char status[32];
+
+	roxml_add_node(node, 0, ROXML_ELM_NODE,
+			"InstanceNumber", (char *)obj->instance_num);
+	sprintf(status, "%d", obj->status);
+	roxml_add_node(node, 0, ROXML_ELM_NODE, "Status", status);
+}
+
 static int cwmp_handle_add_object(struct rpc_data *data)
 {
-	return CWMP_ERROR_REQUEST_DENIED;
+	struct cwmp_iterator it;
+	node_t *node = data->in;
+	char key[32] = { 0, 0 };
+
+	cwmp_iterator_init(&it);
+
+	if (!__soap_get_field(node, "ObjectName", it.path, sizeof(it.path)))
+		return CWMP_ERROR_INVALID_ARGUMENTS;
+
+	__soap_get_field(node, "ParameterKey", key, sizeof(key));
+
+	cwmp_complete_path(it.path);
+	it.node = roxml_add_node(data->out, 0, ROXML_ELM_NODE,
+				"cwmp:AddObjectResponse", NULL);
+	it.cb = add_object_response;
+	return backend.add_object(&it, key);
 }
 
 static int cwmp_handle_delete_object(struct rpc_data *data)
 {
-	return CWMP_ERROR_REQUEST_DENIED;
+	char path[CWMP_PATH_LEN] = { 0, 0 };
+	char key[32] = { 0, 0 };
+	char status[32];
+	node_t *node = data->in;
+
+	__soap_get_field(node, "ObjectName", path, sizeof(path));
+	__soap_get_field(node, "ParameterKey", key, sizeof(key));
+
+	cwmp_complete_path(path);
+	node = roxml_add_node(data->out, 0, ROXML_ELM_NODE,
+				"cwmp:DeleteObjectResponse", NULL);
+	sprintf(status, "%d", backend.del_object(path, key));
+	roxml_add_node(node, 0, ROXML_ELM_NODE, "Status", status);
+	return 0;
 }
 
 static int cwmp_handle_factory_reset(struct rpc_data *data)

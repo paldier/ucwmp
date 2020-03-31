@@ -20,9 +20,20 @@ struct b_cwmp_param {
 	bool writeable;
 };
 
+struct b_cwmp_add_object {
+	const char *instance_num;
+	int status;
+};
+
+struct b_cwmp_del_object {
+	int status;
+};
+
 union cwmp_any {
 	struct b_cwmp_object obj;
 	struct b_cwmp_param param;
+	struct b_cwmp_add_object add_obj;
+	struct b_cwmp_del_object del_obj;
 };
 
 struct cwmp_iterator;
@@ -56,8 +67,8 @@ struct backend {
 	int (*set_parameter_value)(const char *path, const char *value);
 	int (*get_parameter_values)(node_t *node, cwmp_iterator_cb cb);
 	void (*get_parameter_values_init)();
-	// del
-	// add
+	int (*add_object)(struct cwmp_iterator *it, const char *key);
+	int (*del_object)(const char *path, const char *key);
 	int (*commit)();
 };
 
