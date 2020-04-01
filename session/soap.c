@@ -69,7 +69,7 @@ soap_add_header(node_t *node, const char *id, bool inform)
 
 	if (inform)
 		soap_add_header_field(node, "cwmp:SupportedCWMPVersions",
-				      "1.0,1.1,1.2,1.3,1.4", true);
+				      "1.0,1.1,1.2,1.3,1.4,1.5", true);
 }
 
 static node_t *soap_msg_new(const char *id, bool inform)
