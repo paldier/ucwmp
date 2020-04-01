@@ -187,21 +187,33 @@ static void set_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 		{ "status", BLOBMSG_TYPE_INT8 },
 	};
 	struct uspd_set_req *r = req->priv;
-	struct blob_attr *tb[__P_MAX];
+	struct blob_attr *cur;
+	struct blob_attr *params;
+	int rem;
 
-	blobmsg_parse(p, __P_MAX, tb, blobmsg_data(msg), blobmsg_len(msg));
-	if (tb[P_STATUS]) {
-		bool status_ok = blobmsg_get_u8(tb[P_STATUS]);
+	params = get_parameters(msg);
+	if (params == NULL)
+		return;
 
-		if (status_ok)
-			r->error = 0;
-	} else {
-		err("missing 'status' field in response for set, %s = %s\n",
-			r->path, r->value);
+	blobmsg_for_each_attr(cur, params, rem) {
+		struct blob_attr *tb[__P_MAX];
+
+		blobmsg_parse(p, __P_MAX, tb,
+				blobmsg_data(cur), blobmsg_len(cur));
+
+		if (tb[P_STATUS]) {
+			bool status_ok = blobmsg_get_u8(tb[P_STATUS]);
+
+			if (status_ok)
+				r->error = 0;
+		} else {
+			err("missing 'status' field in response for set, %s = %s\n",
+				r->path, r->value);
+		}
+
+		cwmp_debug(1, "usp", "parameter '%s' set value '%s' error '%d'\n",
+			  r->path, r->value, r->error);
 	}
-
-	cwmp_debug(1, "usp", "parameter '%s' set value '%s' error '%d'\n",
-		  r->path, r->value, r->error);
 }
 
 static void usp_get_parameter_values_init()
