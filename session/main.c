@@ -309,6 +309,12 @@ static int cwmp_connect(void)
 		fprintf(stderr, "Connecting to %s\n", url);
 
 	uc = uclient_new(url, auth_str, &cwmp_cb);
+	if (uc == NULL) {
+		fprintf(stderr, "Failed to init uclient, wrong url ? '%s'\n",
+				url);
+		return -1;
+	}
+
 	uclient_http_set_ssl_ctx(uc, ssl_ops, ssl_ctx, 0);
 	err = uclient_connect(uc);
 	if (err) {
