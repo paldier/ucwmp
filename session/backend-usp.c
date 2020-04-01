@@ -149,7 +149,7 @@ static void get_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 		value = tb[P_VAL];
 
 		if ((value && param) || (r->names_only && param)) {
-			union cwmp_any u = { .param.path = r->it->path };
+			union cwmp_any u;
 
 			u.param.path = blobmsg_get_string(param);
 
@@ -157,6 +157,9 @@ static void get_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 				u.param.type = blobmsg_get_string(tb[P_TYPE]);
 			if (u.param.type == NULL)
 				u.param.type = "xsd:string";
+
+			if (value == NULL)
+				continue;
 
 			u.param.value = blob_any_to_string(value, buf, sizeof(buf));
 			if (u.param.value) {
