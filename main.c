@@ -62,8 +62,8 @@ static const struct uci_parse_option server_opts[__SERVER_INFO_MAX] = {
 	[SERVER_INFO_USERNAME] = { "username", UCI_TYPE_STRING },
 	[SERVER_INFO_PASSWORD] = { "password", UCI_TYPE_STRING },
 
-	[SERVER_INFO_PERIODIC_INTERVAL] = { "periodic_interval", UCI_TYPE_STRING },
-	[SERVER_INFO_PERIODIC_ENABLED] = { "periodic_enabled", UCI_TYPE_STRING },
+	[SERVER_INFO_PERIODIC_INTERVAL] = { "periodic_inform_interval", UCI_TYPE_STRING },
+	[SERVER_INFO_PERIODIC_ENABLED] = { "periodic_inform_enable", UCI_TYPE_STRING },
 	[SERVER_INFO_CONN_REQ_PORT] = { "connection_port", UCI_TYPE_STRING },
 
 	[SERVER_INFO_LOCAL_USERNAME] = { "local_username", UCI_TYPE_STRING },
@@ -293,7 +293,7 @@ static int cwmp_get_config_section(struct uci_ptr *ptr)
 {
 	static char buf[32];
 
-	strcpy(buf, "cwmp.@cwmp[0]");
+	strcpy(buf, "cwmp.acs");
 	if (uci_lookup_ptr(uci_ctx, ptr, buf, true)) {
 		uci_perror(uci_ctx, "Failed to load configuration");
 		return -1;
@@ -377,8 +377,8 @@ int cwmp_update_config(enum cwmp_config_change changed)
 		cwmp_flag_event("0 BOOTSTRAP", NULL, NULL);
 		break;
 	case CONFIG_CHANGE_PERIODIC_INFO:
-		cwmp_set_int_option(&ptr, "periodic_interval", config.periodic_interval);
-		cwmp_set_int_option(&ptr, "periodic_enabled", config.periodic_enabled);
+		cwmp_set_int_option(&ptr, "periodic_inform_interval", config.periodic_interval);
+		cwmp_set_int_option(&ptr, "periodic_inform_enable", config.periodic_enabled);
 		cwmp_update_session_timer();
 		break;
 
