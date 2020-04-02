@@ -698,6 +698,31 @@ static void add_value(struct cwmp_iterator *it, union cwmp_any *a)
 			(char *)name, (char *)p->value);
 }
 
+static void add_value_oui(struct cwmp_iterator *it, union cwmp_any *a)
+{
+	const struct b_cwmp_param *p = &a->param;
+
+	roxml_add_node(it->node, 0, ROXML_ELM_NODE,
+			(char *)"OUI", (char *)p->value);
+}
+
+static void cwmp_add_oui(node_t *node)
+{
+	struct cwmp_iterator it;
+
+	cwmp_iterator_init(&it);
+	it.node = node;
+	it.cb = add_value_oui;
+
+	sprintf(it.path, "%s.DeviceInfo.ManufacturerOUI", CWMP_ROOT_OBJECT);
+
+	backend.get_parameter_values_init();
+	backend.get_parameter_value(&it, 0);
+
+	if (backend.get_parameter_values)
+		backend.get_parameter_values(node, add_value_oui);
+}
+
 static void cwmp_add_device_id(node_t *node)
 {
 	struct cwmp_iterator it;
@@ -727,8 +752,7 @@ static void cwmp_add_device_id(node_t *node)
 	if (backend.get_parameter_values)
 		backend.get_parameter_values(node, add_value);
 
-	roxml_add_node(node, 0, ROXML_ELM_NODE,
-			(char *)"OUI", (char *)"000DB9AFDD");
+	cwmp_add_oui(node);
 }
 
 int cwmp_session_init(struct rpc_data *data)
