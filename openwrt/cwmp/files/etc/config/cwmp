@@ -1,9 +1,12 @@
-config cwmp acs
+config acs acs
 	option url 'http://172.27.0.209:8080/openacs/acs'
-	option connection_port '8080'
-	option local_username '_user'
-	option local_password '_password'
 	option username 'admin'
 	option password 'openacs'
 	option periodic_inform_interval '300'
 	option periodic_inform_enable '1'
+
+config cpe cpe
+	option default_wan_interface wan
+	option port '8080'
+	option userid '_user'
+	option passwd '_password'
