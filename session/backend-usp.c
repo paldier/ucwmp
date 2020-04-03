@@ -158,17 +158,18 @@ static void get_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 			if (u.param.type == NULL)
 				u.param.type = "xsd:string";
 
-			if (value == NULL)
-				continue;
+			if (value != NULL)
+				u.param.value = blob_any_to_string(value, buf, sizeof(buf));
+			else
+				u.param.value = "";
 
-			u.param.value = blob_any_to_string(value, buf, sizeof(buf));
-			if (u.param.value) {
-				r->it->cb(r->it, &u);
-				r->n_values += 1;
+			r->it->cb(r->it, &u);
+			r->n_values += 1;
 
-				cwmp_debug(1, "usp", "parameter '%s' get value '%s'\n",
-		  			u.param.path, u.param.value);
-			}
+			cwmp_debug(1, "usp", "parameter '%s' get %s '%s'\n",
+					u.param.path,
+					r->names_only ? "name" : "value",
+					u.param.value);
 		} else {
 			err("missing 'value' field in response for '%s'\n",
 				r->it->path);
