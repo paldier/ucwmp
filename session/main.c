@@ -42,7 +42,7 @@ static const struct ustream_ssl_ops *ssl_ops;
 static void *dlh;
 
 static char *cur_request;
-static char *url, *username, *password, *local_port = "8080";
+static char *url, *username, *password;
 
 static LIST_HEAD(cookies);
 struct blob_buf events;
@@ -335,7 +335,6 @@ static int usage(const char *progname)
 		"	-d <level>:     Set debug level\n"
 		"	-u <username>:  Set ACS username\n"
 		"	-p <password>:  Set ACS password\n"
-		"	-P <port>:	Set local connection port\n"
 		"\n", progname);
 	return 1;
 }
@@ -362,21 +361,14 @@ static int load_events(const char *data)
 	return 0;
 }
 
-static void server_update_local_addr(const char *addr, const char *port)
-{
-	//blobmsg_printf(&vars, "cwmp_local_addr", "%s:%s", addr, port);
-	//acs_set_script_data(&api, vars.head);
-}
-
 int main(int argc, char **argv)
 {
 	const char *progname = argv[0];
-	char local_addr[INET6_ADDRSTRLEN];
 	int ch;
 
 	uloop_init();
 
-	while ((ch = getopt(argc, argv, "a:d:e:u:p:P:")) != -1) {
+	while ((ch = getopt(argc, argv, "a:d:e:u:p:")) != -1) {
 		switch (ch) {
 		case 'a':
 			attr_cache_file = optarg;
@@ -395,9 +387,6 @@ int main(int argc, char **argv)
 			password = strdup(optarg);
 			memset(optarg, 0, strlen(optarg));
 			break;
-		case 'P':
-			local_port = optarg;
-			break;
 		default:
 			return usage(progname);
 		}
@@ -415,9 +404,6 @@ int main(int argc, char **argv)
 
 	if (cwmp_connect())
 		return 1;
-
-	uclient_get_addr(local_addr, NULL, &uc->local_addr);
-	server_update_local_addr(local_addr, local_port);
 
 	cur_request = soap_init_session();
 	cwmp_send_request();

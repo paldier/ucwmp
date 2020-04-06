@@ -17,8 +17,6 @@
 #include <libubox/list.h>
 #include <libubox/blobmsg.h>
 
-#define DEFAULT_CONNECTION_PORT	8080
-
 enum cwmp_event_single {
 	EVENT_BOOTSTRAP,
 	EVENT_BOOT,
@@ -39,33 +37,22 @@ enum cwmp_event_multi {
 	__EVENT_M_MAX
 };
 
-enum {
-	SERVER_INFO_URL,
-	SERVER_INFO_USERNAME,
-	SERVER_INFO_PASSWORD,
-	SERVER_INFO_PERIODIC_INTERVAL,
-	SERVER_INFO_PERIODIC_ENABLED,
-	SERVER_INFO_CONN_REQ_PORT,
-	SERVER_INFO_LOCAL_USERNAME,
-	SERVER_INFO_LOCAL_PASSWORD,
-	__SERVER_INFO_MAX
+struct acs_config {
+	char url[128];
+	char usr[64];
+	char pwd[64];
+	int periodic_interval;
+	bool periodic_enabled;
 };
 
-enum cwmp_config_change {
-	CONFIG_CHANGE_ACS_INFO,
-	CONFIG_CHANGE_PERIODIC_INFO,
-	CONFIG_CHANGE_LOCAL_INFO,
+struct cpe_config {
+	char usr[64];
+	char pwd[64];
 };
 
 struct cwmp_config {
-	const char *acs_info[3];
-
-	int conn_req_port;
-	int periodic_interval;
-	bool periodic_enabled;
-
-	const char *local_username;
-	const char *local_password;
+	struct acs_config acs;
+	struct cpe_config cpe;
 };
 
 enum pending_cmd {
@@ -101,15 +88,12 @@ void cwmp_clear_pending_events(void);
 
 void cwmp_schedule_session(int delay_msec);
 void cwmp_save_cache(bool immediate);
-int cwmp_load_config(void);
+void cwmp_reload(bool acs_changed);
 
 void cwmp_download_add(struct blob_attr *data, bool internal);
 void cwmp_download_check_pending(bool session_complete);
 void cwmp_download_apply_exec(const char *path, const char *type, const char *file, const char *url);
 void cwmp_download_done(struct blob_attr *attr);
-
-int cwmp_update_config(enum cwmp_config_change changed);
-void cwmp_commit_config(void);
 
 int cwmp_ubus_register(void);
 void cwmp_ubus_command(struct blob_attr *data);

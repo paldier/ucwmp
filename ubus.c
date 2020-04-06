@@ -18,10 +18,12 @@
 #include <libubus.h>
 
 #include "state.h"
+#include "strncpyt.h"
 
 static struct ubus_context *ctx;
 static struct blob_buf b;
 static char auth_md5[33];
+extern int debug_level;
 
 static const char * const auth_realm = "ucwmp";
 
@@ -44,6 +46,33 @@ static const struct blobmsg_policy conn_req_policy[__CONN_REQ_MAX] = {
 	[CONN_REQ_RESPONSE] = { "response", BLOBMSG_TYPE_STRING },
 	[CONN_REQ_CNONCE] = { "cnonce", BLOBMSG_TYPE_STRING },
 	[CONN_REQ_NC] = { "nc", BLOBMSG_TYPE_STRING },
+};
+
+enum {
+	CFG_ACS_URL,
+	CFG_ACS_USR,
+	CFG_ACS_PWD,
+	CFG_ACS_PERIODIC_ENABLE,
+	CFG_ACS_PERIODIC_INTERVAL,
+
+	CFG_CPE_USR,
+	CFG_CPE_PWD,
+
+	CFG_CWMP_DEBUG,
+	__CFG_MAX
+};
+
+static const struct blobmsg_policy cfg_policy[__CFG_MAX] = {
+	[CFG_ACS_URL] = { "url", BLOBMSG_TYPE_STRING },
+	[CFG_ACS_USR] = { "username", BLOBMSG_TYPE_STRING },
+	[CFG_ACS_PWD] = { "password", BLOBMSG_TYPE_STRING },
+	[CFG_ACS_PERIODIC_ENABLE] = { "periodic_inform_enabled", BLOBMSG_TYPE_INT8 },
+	[CFG_ACS_PERIODIC_INTERVAL] = { "periodic_inform_interval", BLOBMSG_TYPE_INT32 },
+
+	[CFG_CPE_USR] = { "userid", BLOBMSG_TYPE_STRING },
+	[CFG_CPE_PWD] = { "passwd", BLOBMSG_TYPE_STRING },
+
+	[CFG_CWMP_DEBUG] = { "debug", BLOBMSG_TYPE_INT32 }
 };
 
 static void conn_req_challenge(void)
@@ -79,13 +108,13 @@ static bool conn_req_validate(struct blob_attr **tb)
 	const char *password = "";
 	int i;
 
-	if (!config.local_username)
+	if (!config.cpe.usr[0])
 		return true;
 
-	if (config.local_password)
-		password = config.local_password;
+	if (config.cpe.pwd[0])
+		password = config.cpe.pwd;
 
-	http_digest_calculate_auth_hash(auth_md5, config.local_username,
+	http_digest_calculate_auth_hash(auth_md5, config.cpe.usr,
 					auth_realm, password);
 
 	for (i = 0; i < __CONN_REQ_MAX; i++) {
@@ -205,11 +234,53 @@ cwmp_reboot(struct ubus_context *ctx, struct ubus_object *obj,
 }
 
 static int
-cwmp_reload(struct ubus_context *ctx, struct ubus_object *obj,
+cwmp_set_config(struct ubus_context *ctx, struct ubus_object *obj,
 	    struct ubus_request_data *req, const char *method,
 	    struct blob_attr *msg)
 {
-	cwmp_load_config();
+	struct blob_attr *tb[__CFG_MAX];
+	struct blob_attr *cur;
+	bool acs_changed = false;
+
+	blobmsg_parse(cfg_policy, __CFG_MAX, tb,
+			blobmsg_data(msg), blobmsg_data_len(msg));
+
+	if ((cur = tb[CFG_ACS_URL])) {
+		const char *url = blobmsg_get_string(cur);
+
+		if (strcmp(url, config.acs.url)) {
+			strncpyt(config.acs.url, blobmsg_get_string(cur),
+				sizeof(config.acs.url));
+			acs_changed = true;
+		}
+	}
+
+	if ((cur = tb[CFG_ACS_USR]))
+		strncpyt(config.acs.usr, blobmsg_get_string(cur),
+			sizeof(config.acs.usr));
+
+	if ((cur = tb[CFG_ACS_PWD]))
+		strncpyt(config.acs.pwd, blobmsg_get_string(cur),
+			sizeof(config.acs.pwd));
+
+	if ((cur = tb[CFG_ACS_PERIODIC_ENABLE]))
+		config.acs.periodic_enabled = blobmsg_get_u8(cur);
+
+	if ((cur = tb[CFG_ACS_PERIODIC_INTERVAL]))
+		config.acs.periodic_interval = blobmsg_get_u32(cur);
+
+	if ((cur = tb[CFG_CPE_USR]))
+		strncpyt(config.cpe.usr, blobmsg_get_string(cur),
+			sizeof(config.cpe.usr));
+
+	if ((cur = tb[CFG_CPE_PWD]))
+		strncpyt(config.cpe.pwd, blobmsg_get_string(cur),
+			sizeof(config.cpe.pwd));
+
+	if ((cur = tb[CFG_CWMP_DEBUG]))
+		debug_level = blobmsg_get_u32(cur);
+
+	cwmp_reload(acs_changed);
 	return 0;
 }
 
@@ -224,7 +295,7 @@ static struct ubus_method cwmp_methods[] = {
 
 	UBUS_METHOD_NOARG("factory_reset", cwmp_factory_reset),
 	UBUS_METHOD_NOARG("reboot", cwmp_reboot),
-	UBUS_METHOD_NOARG("reload", cwmp_reload),
+	UBUS_METHOD_NOARG("set_config", cwmp_set_config),
 
 	UBUS_METHOD_NOARG("session_completed", cwmp_session_completed),
 };

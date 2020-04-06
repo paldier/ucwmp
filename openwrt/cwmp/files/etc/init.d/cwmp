@@ -2,47 +2,55 @@
 START=92
 USE_PROCD=1
 
-validate_cwmp_section()
+start_service()
 {
-	uci_validate_section cwmp cwmp "${1}" \
-		'enabled:bool:0' \
-		'username:string' \
-		'password:string' \
-		'local_username:string' \
-		'local_password:string' \
-		'periodic_enabled:bool:1' \
-		'periodic_interval:range(30, 10000)' \
-		'connection_port:port' \
-		'interface:string'
-	return $?
-}
+	local enabled \
+		debug \
+		url \
+		username \
+		password \
+		periodic_inform_enable \
+		periodic_inform_interval \
+		userid \
+		passwd \
+		default_wan_interface \
+		port
 
-prepare_config() {
-	local cfg="$1"
-	
-	config_get enabled "$cfg" enabled 1
-	[ "$enabled" = 1 ] || return
-	config_get connection_port "$cfg" connection_port
-	start=1
-}
-
-start_service() {
 	config_load cwmp
-	config_foreach prepare_config cwmp
 
-	[ -n "$start" ] || return
+	config_get enabled "cwmp" enabled 1
+	config_get debug "cwmp" debug 0
 
-	ubus -t 10 wait_for scald.tr-181
+	[ "$enabled" = 1 ] || return
+
+	config_get url "acs" url
+	config_get username "acs" username
+	config_get password "acs" password
+	config_get periodic_inform_enable "acs" periodic_inform_enable
+	config_get periodic_inform_interval "acs" periodic_inform_interval
+
+	config_get port "cpe" port
+	config_get default_wan_interface "cpe" default_wan_interface
+	config_get userid "cpe" userid
+	config_get passwd "cpe" passwd
 
 	procd_open_instance cwmpd
-	procd_set_param command /usr/sbin/cwmpd -dd
+	procd_set_param command /usr/sbin/cwmpd
+	[ ${debug} -ne 0 ] && procd_append_param command -dd
+	[ -n "${url}" ] && procd_append_param command -a "${url}"
+	[ -n "${username}" ] && procd_append_param command -u "${username}"
+	[ -n "${password}" ] && procd_append_param command -p "${password}"
+	[ "${periodic_inform_enable}" == "1" ] && procd_append_param command -e
+	[ -n "${periodic_inform_interval}" ] && procd_append_param command -i "${periodic_inform_interval}"
+	[ -n "${userid}" ] && procd_append_param command -U "${userid}"
+	[ -n "${passwd}" ] && procd_append_param command -P "${passwd}"
 	procd_set_param respawn
 	procd_set_param stderr 1
 	procd_set_param stdout 1
 	procd_close_instance
 
 	procd_open_instance cwmp-uhttpd
-	procd_set_param command /usr/sbin/uhttpd -f -p "${connection_port:-8080}" -x / -h /usr/libexec/cwmp
+	procd_set_param command /usr/sbin/uhttpd -f -p "${port:-8080}" -x / -h /usr/libexec/cwmp
 	procd_set_param respawn
 
 	procd_open_data
@@ -50,9 +58,9 @@ start_service() {
 
 	json_add_object ""
 	json_add_string type rule
-	json_add_string src "${interface:-wan}"
+	json_add_string src "${default_wan_interface:-wan}"
 	json_add_string proto tcp
-	json_add_string dest_port "${connection_port:-8080}"
+	json_add_string dest_port "${port:-8080}"
 	json_add_string target ACCEPT
 	json_close_object
 
@@ -62,14 +70,59 @@ start_service() {
 	procd_close_instance
 }
 
-service_started() {
+service_started()
+{
 	procd_set_config_changed firewall
 }
 
-reload_service() {
-	start
-	ubus -t 10 wait_for cwmp
-	ubus -S call cwmp reload
+uci_option_to_json_bool()
+{
+        local cfg="$1"
+        local option="$2"
+        local val
+
+        config_get_bool val "$cfg" $option
+        [ -n "$val" ] && json_add_boolean $option $val
+}
+
+uci_option_to_json_string()
+{
+        local cfg="$1"
+        local option="$2"
+        local val
+
+        config_get val "$cfg" "$option"
+        [ -n "$val" ] && json_add_string $option "$val"
+}
+
+uci_option_to_json_int()
+{
+        local cfg="$1"
+        local option="$2"
+        local val
+
+        config_get val "$cfg" $option
+        [ -n "$val" ] && {
+		val=$((val + 0))
+		json_add_int $option $val
+	}
+}
+
+reload_service()
+{
+	config_load "cwmp"
+        json_init
+
+	uci_option_to_json_string acs url
+	uci_option_to_json_string acs username
+	uci_option_to_json_string acs password
+	uci_option_to_json_bool acs periodic_inform_enable
+	uci_option_to_json_int acs periodic_inform_interval
+	uci_option_to_json_string cpe userid
+	uci_option_to_json_string cpe passwd
+	uci_option_to_json_int cwmp debug
+
+	ubus -S call cwmp set_config "$(json_dump)"
 }
 
 boot() {
@@ -81,5 +134,6 @@ boot() {
 service_triggers()
 {
 	procd_add_reload_trigger "cwmp"
-	procd_add_validation validate_cwmp_section
+	procd_add_reload_trigger "cpe"
+	procd_add_reload_trigger "acs"
 }
