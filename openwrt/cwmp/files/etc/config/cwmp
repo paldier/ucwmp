@@ -10,6 +10,8 @@ config cpe cpe
 	option port '8080'
 	option userid '_user'
 	option passwd '_password'
+	option instance_mode 'InstanceNumber'
+	option amd_version '2'
 
 config cwmp cwmp
 	option enabled 1
