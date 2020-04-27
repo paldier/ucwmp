@@ -124,14 +124,22 @@ static void get_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 		P_PARAM,
 		__P_MAX
 	};
-	static const struct blobmsg_policy p[] = {
+	enum {
+		P_FAULT_PATH,
+		P_FAULT_FAULT,
+		__P_FAULT_MAX
+	};
+	static const struct blobmsg_policy p[__P_MAX] = {
 		{ "value", BLOBMSG_TYPE_UNSPEC },
 		{ "type", BLOBMSG_TYPE_STRING },
 		{ "parameter", BLOBMSG_TYPE_STRING }
 	};
+	static const struct blobmsg_policy p_fault[__P_FAULT_MAX] = {
+		{ "path", BLOBMSG_TYPE_STRING },
+		{ "fault", BLOBMSG_TYPE_INT32 }
+	};
 	char buf[32];
 	struct uspd_get_req *r = req->priv;
-	struct blob_attr *tb[__P_MAX];
 	struct blob_attr *cur;
 	struct blob_attr *params;
 	int rem;
@@ -141,6 +149,7 @@ static void get_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 		return;
 
 	blobmsg_for_each_attr(cur, params, rem) {
+		struct blob_attr *tb[__P_MAX];
 		struct blob_attr *param;
 		struct blob_attr *value;
 
@@ -171,9 +180,27 @@ static void get_cb(struct ubus_request *req, int type, struct blob_attr *msg)
 					r->names_only ? "name" : "value",
 					u.param.value);
 		} else {
-			err("missing 'value' field in response for '%s'\n",
-				r->it->path);
-			r->it->error = CWMP_ERROR_INTERNAL_ERROR;
+			struct blob_attr *tb_fault[__P_FAULT_MAX];
+			const char *path = "";
+			int fault = 0;
+
+			blobmsg_parse(p_fault, __P_FAULT_MAX, tb_fault,
+					blobmsg_data(cur), blobmsg_len(cur));
+
+			if ((cur = tb_fault[P_FAULT_PATH]))
+				path = blobmsg_get_string(cur);
+
+			if ((cur = tb_fault[P_FAULT_FAULT]))
+				fault = blobmsg_get_u32(cur);
+
+			cwmp_debug(1, "usp",
+				"parameter '%s' get value error '%d'\n",
+				path, fault);
+
+			if (fault)
+				r->it->error = fault;
+			else
+				r->it->error = CWMP_ERROR_INTERNAL_ERROR;
 		}
 	}
 }
